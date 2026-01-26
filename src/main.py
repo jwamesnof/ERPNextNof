@@ -106,7 +106,7 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(
-        "main:app",
+        "src.main:app",
         host=settings.otp_service_host,
         port=settings.otp_service_port,
         reload=settings.otp_service_env == "development",
