@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  otp-service:
+    build: .
+    container_name: erpnext-otp
+    ports:
+      - "8001:8001"
+    environment:
+      - ERPNEXT_BASE_URL=${ERPNEXT_BASE_URL}
+      - ERPNEXT_API_KEY=${ERPNEXT_API_KEY}
+      - ERPNEXT_API_SECRET=${ERPNEXT_API_SECRET}
+      - ERPNEXT_SITE_NAME=${ERPNEXT_SITE_NAME}
+      - OTP_SERVICE_HOST=${OTP_SERVICE_HOST}
+      - OTP_SERVICE_PORT=${OTP_SERVICE_PORT}
+      - OTP_SERVICE_ENV=${OTP_SERVICE_ENV}
+      - DEFAULT_WAREHOUSE=${DEFAULT_WAREHOUSE}
+      - NO_WEEKENDS=${NO_WEEKENDS}
+      - CUTOFF_TIME=${CUTOFF_TIME}
+      - TIMEZONE=${TIMEZONE}
+      - LEAD_TIME_BUFFER_DAYS=${LEAD_TIME_BUFFER_DAYS}
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+    networks:
+      - erpnext-network
+    depends_on:
+      - erpnext
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8001 --reload
+
+  # Note: Assumes ERPNext is running separately on the host
+  # If you want to run ERPNext in docker-compose, add it here
+  erpnext:
+    image: frappe/erpnext:latest
+    container_name: erpnext
+    ports:
+      - "8080:8000"
+    networks:
+      - erpnext-network
+    # Add ERPNext configuration as needed
+
+networks:
+  erpnext-network:
+    driver: bridge
