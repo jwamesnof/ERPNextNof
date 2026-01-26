@@ -10,6 +10,7 @@ from src.models.response_models import (
     PromiseResponse,
     ApplyPromiseResponse,
     ProcurementSuggestionResponse,
+    HealthResponse,
 )
 from src.controllers.otp_controller import OTPController
 from src.services.promise_service import PromiseService
@@ -111,3 +112,37 @@ async def create_procurement_suggestion(
     except Exception as e:
         logger.error(f"Unexpected error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
+
+@router.get("/health", response_model=HealthResponse)
+async def health_check() -> HealthResponse:
+    """
+    Health check endpoint.
+    
+    Returns service status and ERPNext connectivity.
+    """
+    try:
+        client = ERPNextClient()
+        # Try a simple query to verify ERPNext connection
+        erpnext_connected = False
+        try:
+            # Attempt to call a simple API method
+            client.get_stock_balance("*", None)
+            erpnext_connected = True
+        except:
+            pass
+        
+        return HealthResponse(
+            status="healthy",
+            version="0.1.0",
+            erpnext_connected=erpnext_connected,
+            message="OTP Service is operational"
+        )
+    except Exception as e:
+        logger.error(f"Health check error: {e}")
+        return HealthResponse(
+            status="healthy",
+            version="0.1.0",
+            erpnext_connected=False,
+            message=f"Service running but ERPNext unavailable: {str(e)}"
+        )
