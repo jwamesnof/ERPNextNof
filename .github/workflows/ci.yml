@@ -47,8 +47,9 @@ jobs:
           pytest tests/api/ -v --cov=src --cov-append --cov-report=xml --cov-report=term
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
+          token: ${{ secrets.CODECOV_TOKEN }}
           file: ./coverage.xml
           flags: unittests
           name: codecov-otp
@@ -67,6 +68,7 @@ jobs:
             coverage.xml
             htmlcov/
             coverage_report.md
+            allure-results/
 
   build-docker:
     runs-on: ubuntu-latest
