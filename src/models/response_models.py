@@ -74,3 +74,15 @@ class HealthResponse(BaseModel):
     version: str = "0.1.0"
     erpnext_connected: bool = False
     message: Optional[str] = None
+
+
+class SalesOrderSummary(BaseModel):
+    """Sales Order summary for list endpoint."""
+
+    name: str
+    customer: str
+    delivery_date: Optional[date] = None
+    item_count: int
+    total_qty: float
+    status: str
+    so_date: date

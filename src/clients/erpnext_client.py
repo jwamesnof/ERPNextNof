@@ -1,7 +1,8 @@
 """ERPNext API client with authentication and error handling."""
 import httpx
 from typing import Dict, Any, List, Optional
-from datetime import datetime
+from datetime import datetime, date, timedelta
+import json
 import logging
 from src.config import settings
 
@@ -180,6 +181,64 @@ class ERPNextClient:
         """Get Sales Order details."""
         response = self.client.get(f"/api/resource/Sales Order/{sales_order_id}")
         return self._handle_response(response)
+
+    def get_sales_orders(
+        self,
+        days_back: int = 30,
+        limit: int = 50,
+        offset: int = 0,
+        status: Optional[str] = None,
+        customer: Optional[str] = None,
+        search: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Get recent Sales Orders.
+        
+        Filters:
+            - Draft or Submitted (docstatus 0/1)
+            - Transaction date within last N days
+        Optional filters:
+            - status, customer
+            - search by name or customer
+        """
+        since_date = (date.today() - timedelta(days=days_back)).strftime("%Y-%m-%d")
+        filters: List[List[Any]] = [
+            ["docstatus", "in", [0, 1]],
+            ["transaction_date", ">=", since_date],
+        ]
+
+        if status:
+            filters.append(["status", "=", status])
+
+        if customer:
+            filters.append(["customer", "=", customer])
+
+        params: Dict[str, Any] = {
+            "doctype": "Sales Order",
+            "filters": json.dumps(filters),
+            "fields": json.dumps(
+                [
+                    "name",
+                    "customer",
+                    "delivery_date",
+                    "transaction_date",
+                    "status",
+                    "total_qty",
+                ]
+            ),
+            "order_by": "transaction_date desc",
+            "limit_page_length": limit,
+            "limit_start": offset,
+        }
+
+        if search:
+            params["or_filters"] = json.dumps(
+                [["name", "like", f"%{search}%"], ["customer", "like", f"%{search}%"]]
+            )
+
+        response = self.client.get("/api/resource/Sales Order", params=params)
+        data = self._handle_response(response)
+        return data if isinstance(data, list) else []
 
     def add_comment_to_doc(
         self, doctype: str, docname: str, comment_text: str

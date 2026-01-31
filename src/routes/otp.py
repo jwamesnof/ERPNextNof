@@ -1,6 +1,8 @@
 """API routes for OTP endpoints."""
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 import logging
+import time
+from typing import List, Optional, Dict, Any, Tuple
 from src.models.request_models import (
     PromiseRequest,
     ApplyPromiseRequest,
@@ -11,6 +13,7 @@ from src.models.response_models import (
     ApplyPromiseResponse,
     ProcurementSuggestionResponse,
     HealthResponse,
+    SalesOrderSummary,
 )
 from src.controllers.otp_controller import OTPController
 from src.services.promise_service import PromiseService
@@ -21,6 +24,9 @@ from src.clients.erpnext_client import ERPNextClient, ERPNextClientError
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/otp", tags=["OTP"])
+
+_SALES_ORDER_CACHE_TTL_SECONDS = 300
+_sales_orders_cache: Dict[Tuple[Any, ...], Dict[str, Any]] = {}
 
 
 def get_erpnext_client() -> ERPNextClient:
@@ -146,3 +152,75 @@ async def health_check() -> HealthResponse:
             erpnext_connected=False,
             message=f"Service running but ERPNext unavailable: {str(e)}"
         )
+
+
+@router.get("/sales-orders", response_model=List[SalesOrderSummary])
+async def list_sales_orders(
+    client: ERPNextClient = Depends(get_erpnext_client),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    days_back: int = Query(30, ge=1, le=365),
+    status: Optional[str] = Query(None),
+    customer: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+) -> List[SalesOrderSummary]:
+    """
+    List recent Sales Orders from ERPNext.
+    
+    Returns Sales Orders (Draft/Submitted) from the last N days.
+    Supports pagination and optional filtering.
+    """
+    cache_key = (limit, offset, days_back, status, customer, search)
+    cached = _sales_orders_cache.get(cache_key)
+    now = time.time()
+    if cached and cached["expires_at"] > now:
+        return cached["data"]
+
+    try:
+        logger.info("[OTP API] Fetching sales orders")
+        orders = client.get_sales_orders(
+            days_back=days_back,
+            limit=limit,
+            offset=offset,
+            status=status,
+            customer=customer,
+            search=search,
+        )
+
+        results: List[SalesOrderSummary] = []
+        for order in orders:
+            so_name = order.get("name")
+            item_count = 0
+            if so_name:
+                try:
+                    so_detail = client.get_sales_order(so_name)
+                    items = so_detail.get("items") if isinstance(so_detail, dict) else None
+                    if isinstance(items, list):
+                        item_count = len(items)
+                except ERPNextClientError as e:
+                    logger.warning(f"[OTP API] Failed to fetch items for {so_name}: {e}")
+
+            results.append(
+                SalesOrderSummary(
+                    name=so_name,
+                    customer=order.get("customer"),
+                    delivery_date=order.get("delivery_date"),
+                    item_count=item_count,
+                    total_qty=float(order.get("total_qty") or 0),
+                    status=order.get("status"),
+                    so_date=order.get("transaction_date"),
+                )
+            )
+
+        _sales_orders_cache[cache_key] = {
+            "data": results,
+            "expires_at": now + _SALES_ORDER_CACHE_TTL_SECONDS,
+        }
+        return results
+
+    except ERPNextClientError as e:
+        logger.error(f"[OTP API] ERPNext error: {e}")
+        raise HTTPException(status_code=503, detail=f"ERPNext service error: {str(e)}")
+    except Exception as e:
+        logger.error(f"[OTP API] Unexpected error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
