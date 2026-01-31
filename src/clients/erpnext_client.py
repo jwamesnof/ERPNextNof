@@ -1,5 +1,6 @@
 """ERPNext API client with authentication and error handling."""
 import httpx
+import json
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 import logging
@@ -65,9 +66,12 @@ class ERPNextClient:
 
         except httpx.HTTPStatusError as e:
             logger.error(f"HTTP error: {e.response.status_code} - {e.response.text}")
-            raise ERPNextClientError(
+            # Preserve status code for permission vs missing data distinction
+            error = ERPNextClientError(
                 f"HTTP {e.response.status_code}: {e.response.text}"
-            ) from e
+            )
+            error.status_code = e.response.status_code
+            raise error from e
         except httpx.TimeoutException as e:
             logger.error(f"Request timeout: {e}")
             raise ERPNextClientError("Request to ERPNext timed out") from e
@@ -104,9 +108,17 @@ class ERPNextClient:
         Alternative method using frappe.client.get_list
         """
         params = {
-            "doctype": "Bin",
-            "filters": [["item_code", "=", item_code], ["warehouse", "=", warehouse]],
-            "fields": ["actual_qty", "reserved_qty", "projected_qty", "warehouse"],
+            # ERPNext expects JSON strings for list params
+            "filters": json.dumps([
+                ["item_code", "=", item_code],
+                ["warehouse", "=", warehouse],
+            ]),
+            "fields": json.dumps([
+                "actual_qty",
+                "reserved_qty",
+                "projected_qty",
+                "warehouse",
+            ]),
         }
 
         response = self.client.get("/api/resource/Bin", params=params)
@@ -128,6 +140,9 @@ class ERPNextClient:
         """
         Get open purchase orders with expected delivery for an item.
         
+        Uses parent-based approach (fetches full POs then filters) to avoid
+        needing Purchase Order Item child table permissions.
+        
         Returns list of:
             {
                 "po_id": "PO-00123",
@@ -138,48 +153,94 @@ class ERPNextClient:
                 "schedule_date": "2026-02-03"
             }
         """
+        # Get all submitted Purchase Orders
         params = {
-            "doctype": "Purchase Order Item",
-            "filters": [
-                ["item_code", "=", item_code],
-                ["docstatus", "=", 1],  # Submitted
-                ["qty", ">", "received_qty"],  # Not fully received
-            ],
-            "fields": [
-                "parent",
-                "item_code",
-                "qty",
-                "received_qty",
-                "schedule_date",
-                "warehouse",
-            ],
-            "order_by": "schedule_date asc",
+            "filters": json.dumps([
+                ["docstatus", "=", 1],  # Submitted only
+            ]),
+            "fields": json.dumps(["name"]),
+            "limit_page_length": 999,
         }
-
-        response = self.client.get("/api/resource/Purchase Order Item", params=params)
-        items = self._handle_response(response)
-
-        # Transform to our format
+        
+        response = self.client.get("/api/resource/Purchase Order", params=params)
+        po_list = self._handle_response(response)
+        
+        # Now fetch full details for each PO and filter items
         result = []
-        for item in items if isinstance(items, list) else []:
-            result.append(
-                {
-                    "po_id": item.get("parent"),
-                    "item_code": item.get("item_code"),
-                    "qty": item.get("qty", 0),
-                    "received_qty": item.get("received_qty", 0),
-                    "pending_qty": item.get("qty", 0) - item.get("received_qty", 0),
-                    "schedule_date": item.get("schedule_date"),
-                    "warehouse": item.get("warehouse"),
-                }
-            )
-
+        for po_summary in (po_list if isinstance(po_list, list) else []):
+            po_name = po_summary.get("name")
+            if not po_name:
+                continue
+                
+            try:
+                # Get full PO with items
+                po_response = self.client.get(f"/api/resource/Purchase Order/{po_name}")
+                po = self._handle_response(po_response)
+                
+                # Filter items for this item_code
+                for item in po.get("items", []):
+                    if item.get("item_code") == item_code:
+                        qty = item.get("qty", 0)
+                        received = item.get("received_qty", 0)
+                        pending = qty - received
+                        
+                        # Only include if not fully received
+                        if pending > 0:
+                            result.append({
+                                "po_id": po_name,
+                                "item_code": item.get("item_code"),
+                                "qty": qty,
+                                "received_qty": received,
+                                "pending_qty": pending,
+                                "schedule_date": item.get("schedule_date"),
+                                "warehouse": item.get("warehouse"),
+                            })
+            except Exception:
+                # Skip POs we can't access
+                continue
+        
+        # Sort by schedule date
+        result.sort(key=lambda x: x.get("schedule_date") or "9999-99-99")
         return result
 
     def get_sales_order(self, sales_order_id: str) -> Dict[str, Any]:
         """Get Sales Order details."""
         response = self.client.get(f"/api/resource/Sales Order/{sales_order_id}")
         return self._handle_response(response)
+
+    def get_sales_order_list(
+        self,
+        filters: Optional[List] = None,
+        fields: Optional[List[str]] = None,
+        limit: int = 20,
+        order_by: str = "creation desc"
+    ) -> List[Dict[str, Any]]:
+        """
+        Get list of Sales Orders.
+        
+        Args:
+            filters: ERPNext filters (e.g., [["customer", "=", "ABC Corp"]])
+            fields: Fields to return (defaults to common fields)
+            limit: Max results
+            order_by: Sort order
+            
+        Returns:
+            List of Sales Order dicts
+        """
+        if fields is None:
+            fields = ["name", "customer", "creation", "delivery_date", "grand_total", "docstatus"]
+        
+        params = {
+            "fields": json.dumps(fields),
+            "filters": json.dumps(filters or []),
+            "limit_page_length": limit,
+            "order_by": order_by,
+        }
+        
+        response = self.client.get("/api/resource/Sales Order", params=params)
+        data = self._handle_response(response)
+        
+        return data if isinstance(data, list) else data.get("data", [])
 
     def add_comment_to_doc(
         self, doctype: str, docname: str, comment_text: str

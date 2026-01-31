@@ -1,4 +1,4 @@
-# ERPNext Order Promise Engine (OTP)
+![alt text](image.png)# ERPNext Order Promise Engine (OTP)
 
 [![CI Tests](https://github.com/yourusername/ERPNextNof/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/ERPNextNof/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/yourusername/ERPNextNof/branch/main/graph/badge.svg)](https://codecov.io/gh/yourusername/ERPNextNof)
@@ -178,6 +178,38 @@ curl -X POST "http://localhost:8001/otp/procurement-suggest" \
     "priority": "HIGH"
   }'
 ```
+
+## 🧪 Testing
+
+### Run All Tests
+
+## 📦 Demo Data
+
+The application includes sample Sales Invoices data loaded from ERPNext for testing and demonstration:
+
+### Demo Endpoints
+
+```bash
+# Get summary statistics
+curl http://localhost:8001/demo/invoices/summary
+
+# Get all invoices
+curl http://localhost:8001/demo/invoices/all
+
+# Filter by customer
+curl "http://localhost:8001/demo/invoices/customer/Grant%20Plastics%20Ltd."
+
+# Filter by item code
+curl http://localhost:8001/demo/invoices/item/SKU001
+```
+
+**Data Summary:**
+- 5 Sales Invoices from ERPNext demo site
+- 3 unique customers
+- 5 unique item SKUs
+- Total value: 363,000 ILS
+
+See [DEMO_DATA.md](DEMO_DATA.md) for detailed endpoint documentation.
 
 ## 🧪 Testing
 

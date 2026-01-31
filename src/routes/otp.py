@@ -15,8 +15,10 @@ from src.models.response_models import (
 from src.controllers.otp_controller import OTPController
 from src.services.promise_service import PromiseService
 from src.services.stock_service import StockService
+from src.services.mock_supply_service import MockSupplyService
 from src.services.apply_service import ApplyService
 from src.clients.erpnext_client import ERPNextClient, ERPNextClientError
+from src.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -30,13 +32,16 @@ def get_erpnext_client() -> ERPNextClient:
 
 def get_controller(client: ERPNextClient = Depends(get_erpnext_client)) -> OTPController:
     """Dependency to get OTP controller with all services."""
-    stock_service = StockService(client)
+    if settings.use_mock_supply:
+        stock_service = MockSupplyService(settings.mock_data_file)
+    else:
+        stock_service = StockService(client)
     promise_service = PromiseService(stock_service)
     apply_service = ApplyService(client)
     return OTPController(promise_service, apply_service)
 
 
-@router.post("/promise", response_model=PromiseResponse)
+@router.post("/promise", response_model=PromiseResponse, response_model_exclude_none=False)
 async def calculate_promise(
     request: PromiseRequest,
     controller: OTPController = Depends(get_controller),
@@ -121,6 +126,14 @@ async def health_check() -> HealthResponse:
     
     Returns service status and ERPNext connectivity.
     """
+    if settings.use_mock_supply:
+        return HealthResponse(
+            status="healthy",
+            version="0.1.0",
+            erpnext_connected=False,
+            message="OTP Service is operational (using mock supply data)",
+        )
+
     try:
         client = ERPNextClient()
         # Try a simple query to verify ERPNext connection

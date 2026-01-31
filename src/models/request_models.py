@@ -2,6 +2,14 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import date
+from enum import Enum
+
+
+class DesiredDateMode(str, Enum):
+    """Mode for interpreting desired_date."""
+    LATEST_ACCEPTABLE = "LATEST_ACCEPTABLE"  # desired_date is latest acceptable delivery
+    STRICT_FAIL = "STRICT_FAIL"  # Hard constraint - fail if promise > desired
+    NO_EARLY_DELIVERY = "NO_EARLY_DELIVERY"  # Customer does not want delivery earlier than desired
 
 
 class ItemRequest(BaseModel):
@@ -19,6 +27,11 @@ class PromiseRules(BaseModel):
     cutoff_time: str = Field("14:00", description="Daily cutoff time (HH:MM)")
     timezone: str = Field("UTC", description="Timezone for calculations")
     lead_time_buffer_days: int = Field(1, ge=0, description="Additional buffer days")
+    processing_lead_time_days: int = Field(1, ge=0, description="Warehouse processing days before shipment")
+    desired_date_mode: DesiredDateMode = Field(
+        DesiredDateMode.LATEST_ACCEPTABLE,
+        description="How to interpret desired_date: LATEST_ACCEPTABLE (default), STRICT_FAIL, or NO_EARLY_DELIVERY"
+    )
 
 
 class PromiseRequest(BaseModel):

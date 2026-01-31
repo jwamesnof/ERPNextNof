@@ -1,0 +1,16 @@
+item_code,warehouse,actual_qty,reserved_qty,projected_qty
+SKU001,Stores - WH,120,10,110
+SKU002,Stores - WH,50,5,45
+SKU003,Stores - WH,200,20,180
+SKU004,Stores - WH,80,5,75
+SKU005,Stores - WH,90,5,85
+SKU006,Stores - WH,40,0,40
+SKU007,Stores - WH,30,0,30
+SKU008,Stores - WH,70,5,65
+SKU009,Stores - WH,60,0,60
+SKU010,Stores - WH,40,0,40
+SKU001,Work In Progress - SD,120,10,110
+SKU004,Goods In Transit - SD,80,5,75
+SKU003,Goods In Transit - SD,200,20,180
+SKU005,Stores - SD,90,5,85
+SKU008,Stores - SD,70,5,65

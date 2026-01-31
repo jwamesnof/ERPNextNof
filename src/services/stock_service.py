@@ -51,24 +51,31 @@ class StockService:
 
     def get_incoming_supply(
         self, item_code: str, after_date: Optional[date] = None
-    ) -> List[Dict]:
+    ) -> Dict[str, any]:
         """
         Get incoming supply from purchase orders.
         
-        Returns list of incoming supply sorted by date:
-            [
-                {
-                    "po_id": "PO-00123",
-                    "qty": 5.0,
-                    "expected_date": date(2026, 2, 3),
-                    "warehouse": "Stores - WH"
-                }
-            ]
+        Returns:
+            {
+                "supply": [  # List of supply, may be empty if no POs exist
+                    {
+                        "po_id": "PO-00123",
+                        "qty": 5.0,
+                        "expected_date": date(2026, 2, 3),
+                        "warehouse": "Stores - WH"
+                    }
+                ],
+                "access_error": None or str  # "permission_denied" or "other_error"
+            }
         """
+        result = {
+            "supply": [],
+            "access_error": None
+        }
+        
         try:
             pos = self.client.get_incoming_purchase_orders(item_code)
 
-            result = []
             for po in pos:
                 # Parse schedule_date
                 schedule_date_str = po.get("schedule_date")
@@ -87,7 +94,7 @@ class StockService:
                 if after_date and expected_date < after_date:
                     continue
 
-                result.append(
+                result["supply"].append(
                     {
                         "po_id": po["po_id"],
                         "qty": po["pending_qty"],
@@ -97,9 +104,17 @@ class StockService:
                 )
 
             # Sort by expected date
-            result.sort(key=lambda x: x["expected_date"])
+            result["supply"].sort(key=lambda x: x["expected_date"])
             return result
 
         except ERPNextClientError as e:
-            logger.error(f"Failed to get incoming supply for {item_code}: {e}")
-            return []
+            # Distinguish between permission error and other errors
+            status_code = getattr(e, 'status_code', None)
+            if status_code == 403:
+                result["access_error"] = "permission_denied"
+                logger.warning(f"Permission denied accessing PO data for {item_code}: {e}")
+            else:
+                result["access_error"] = "other_error"
+                logger.error(f"Failed to get incoming supply for {item_code}: {e}")
+            return result
+

@@ -43,6 +43,12 @@ class OTPController:
             f"Promise calculated: {response.promise_date} "
             f"(confidence: {response.confidence})"
         )
+        
+        # Debug log for desired_date fields
+        logger.info(
+            f"Response fields: desired_date={response.desired_date}, "
+            f"on_time={response.on_time}, mode={response.desired_date_mode}"
+        )
 
         return response
 

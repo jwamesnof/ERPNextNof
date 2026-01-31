@@ -33,11 +33,14 @@ class TestPromiseService:
 
         # Assertions
         assert response.confidence == "HIGH"
-        assert response.promise_date == today + timedelta(days=1)  # +1 buffer
+        # promise_date = stock_available_date(today) + processing_lead_time(1 day) + buffer(1 day)
+        assert response.promise_date == today + timedelta(days=2)
         assert len(response.plan) == 1
         assert response.plan[0].shortage == 0
         assert response.plan[0].fulfillment[0].source == "stock"
         assert response.plan[0].fulfillment[0].qty == 10.0
+        # Verify ship_ready_date includes processing lead time
+        assert response.plan[0].fulfillment[0].ship_ready_date == today + timedelta(days=1)
 
     def test_promise_partial_stock(self, mock_erpnext_client, today):
         """Test: Partial from stock, rest from PO → MEDIUM confidence."""
@@ -71,7 +74,8 @@ class TestPromiseService:
 
         # Assertions
         assert response.confidence == "MEDIUM"
-        assert response.promise_date == today + timedelta(days=4)  # 3 days + 1 buffer
+        # promise_date = stock_available(0) + processing_lead_time(1) + partial_PO_available(3) + processing_lead_time(1) + buffer(1) = 6
+        assert response.promise_date == today + timedelta(days=5)  # PO in 3 days + processing lead time(1) + buffer(1)
         assert len(response.plan[0].fulfillment) == 2
         assert response.plan[0].fulfillment[0].source == "stock"
         assert response.plan[0].fulfillment[1].source == "purchase_order"
@@ -109,7 +113,8 @@ class TestPromiseService:
 
         # Assertions
         assert response.confidence == "MEDIUM"
-        assert response.promise_date == today + timedelta(days=6)  # 5 days + 1 buffer
+        # promise_date = PO_available(5 days) + processing_lead_time(1) + buffer(1) = 7 days
+        assert response.promise_date == today + timedelta(days=7)  # 5 days PO + 1 processing + 1 buffer
         assert response.plan[0].fulfillment[0].source == "purchase_order"
 
     def test_promise_shortage(self, mock_erpnext_client, today):
@@ -220,5 +225,7 @@ class TestPromiseService:
         )
 
         # Promise should be based on Item B (latest)
-        assert response.promise_date == today + timedelta(days=6)  # 5 + 1 buffer
+        # Item A: today + processing_lead_time(1) + buffer(1) = +2 days
+        # Item B: 5 days + processing_lead_time(1) + buffer(1) = +7 days
+        assert response.promise_date == today + timedelta(days=7)  # Item B is latest: 5 + 1 processing + 1 buffer
         assert len(response.plan) == 2
