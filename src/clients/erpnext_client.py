@@ -105,17 +105,24 @@ class ERPNextClient:
         Alternative method using frappe.client.get_list
         """
         params = {
-            "doctype": "Bin",
-            "filters": [["item_code", "=", item_code], ["warehouse", "=", warehouse]],
-            "fields": ["actual_qty", "reserved_qty", "projected_qty", "warehouse"],
+            "filters": json.dumps([["item_code", "=", item_code], ["warehouse", "=", warehouse]]),
+            "fields": json.dumps(["actual_qty", "reserved_qty", "projected_qty", "warehouse"]),
         }
 
         response = self.client.get("/api/resource/Bin", params=params)
         data = self._handle_response(response)
         
+        # ERPNext returns data wrapped in a 'data' key
+        if isinstance(data, dict) and "data" in data:
+            bin_list = data["data"]
+        elif isinstance(data, list):
+            bin_list = data
+        else:
+            bin_list = []
+        
         # Return first bin or empty result
-        if isinstance(data, list) and len(data) > 0:
-            return data[0]
+        if bin_list and len(bin_list) > 0:
+            return bin_list[0]
         
         return {
             "item_code": item_code,
@@ -129,6 +136,9 @@ class ERPNextClient:
         """
         Get open purchase orders with expected delivery for an item.
         
+        Workaround: Query Purchase Orders directly and extract items with matching item_code.
+        This avoids the permission issue with Purchase Order Item child table.
+        
         Returns list of:
             {
                 "po_id": "PO-00123",
@@ -139,72 +149,94 @@ class ERPNextClient:
                 "schedule_date": "2026-02-03"
             }
         """
-        params = {
-            "doctype": "Purchase Order Item",
-            "filters": [
-                ["item_code", "=", item_code],
-                ["docstatus", "=", 1],  # Submitted
-                ["qty", ">", "received_qty"],  # Not fully received
-            ],
-            "fields": [
-                "parent",
-                "item_code",
-                "qty",
-                "received_qty",
-                "schedule_date",
-                "warehouse",
-            ],
-            "order_by": "schedule_date asc",
-        }
+        try:
+            # Query all Purchase Orders that are submitted and not fully received
+            params = {
+                "filters": json.dumps([
+                    ["docstatus", "=", 1],  # Submitted
+                ]),
+                "fields": json.dumps(["name"]),
+                "limit_page_length": 500,
+            }
 
-        response = self.client.get("/api/resource/Purchase Order Item", params=params)
-        items = self._handle_response(response)
+            response = self.client.get("/api/resource/Purchase Order", params=params)
+            pos = self._handle_response(response)
 
-        # Transform to our format
-        result = []
-        for item in items if isinstance(items, list) else []:
-            result.append(
-                {
-                    "po_id": item.get("parent"),
-                    "item_code": item.get("item_code"),
-                    "qty": item.get("qty", 0),
-                    "received_qty": item.get("received_qty", 0),
-                    "pending_qty": item.get("qty", 0) - item.get("received_qty", 0),
-                    "schedule_date": item.get("schedule_date"),
-                    "warehouse": item.get("warehouse"),
-                }
-            )
-
-        return result
+            # Extract items with matching item_code from each PO
+            result = []
+            for po_name in (pos if isinstance(pos, list) else []):
+                # Get individual PO with items
+                po_id = po_name if isinstance(po_name, str) else po_name.get("name")
+                
+                po_response = self.client.get(f"/api/resource/Purchase Order/{po_id}")
+                po = self._handle_response(po_response)
+                
+                if not po:
+                    continue
+                    
+                po_items = po.get("items", [])
+                for item in po_items:
+                    if item.get("item_code") == item_code:
+                        # Check if not fully received
+                        qty = item.get("qty", 0)
+                        received_qty = item.get("received_qty", 0)
+                        if qty > received_qty:
+                            result.append(
+                                {
+                                    "po_id": po.get("name"),
+                                    "item_code": item.get("item_code"),
+                                    "qty": qty,
+                                    "received_qty": received_qty,
+                                    "pending_qty": qty - received_qty,
+                                    "schedule_date": item.get("schedule_date"),
+                                    "warehouse": item.get("warehouse"),
+                                }
+                            )
+            
+            # Sort by schedule_date
+            result.sort(key=lambda x: x.get("schedule_date", ""), reverse=False)
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error querying incoming purchase orders for {item_code}: {e}")
+            return []
 
     def get_sales_order(self, sales_order_id: str) -> Dict[str, Any]:
         """Get Sales Order details."""
         response = self.client.get(f"/api/resource/Sales Order/{sales_order_id}")
         return self._handle_response(response)
 
-    def get_sales_orders(
+    def get_sales_order_list(
         self,
-        days_back: int = 30,
-        limit: int = 50,
+        limit: int = 20,
         offset: int = 0,
         status: Optional[str] = None,
         customer: Optional[str] = None,
+        from_date: Optional[str] = None,
+        to_date: Optional[str] = None,
         search: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
-        Get recent Sales Orders.
+        Get Sales Orders list from ERPNext via Resource API.
         
-        Filters:
-            - Draft or Submitted (docstatus 0/1)
-            - Transaction date within last N days
-        Optional filters:
-            - status, customer
-            - search by name or customer
+        Args:
+            limit: Max number of results (default 20, max 100)
+            offset: Number of records to skip for pagination (default 0)
+            status: Filter by status (e.g., 'Draft', 'To Deliver')
+            customer: Filter by customer name
+            from_date: Filter transaction_date >= this date (ISO format)
+            to_date: Filter transaction_date <= this date (ISO format)
+            search: Search in SO name or customer name
+        
+        Returns:
+            List of Sales Order dictionaries with minimal fields
+        
+        Note:
+            Uses Resource API (/api/resource/Sales Order), NOT method API.
+            Do NOT pass doctype in params - it's in the URL path.
         """
-        since_date = (date.today() - timedelta(days=days_back)).strftime("%Y-%m-%d")
         filters: List[List[Any]] = [
-            ["docstatus", "in", [0, 1]],
-            ["transaction_date", ">=", since_date],
+            ["docstatus", "in", [0, 1]],  # Draft or Submitted
         ]
 
         if status:
@@ -213,21 +245,28 @@ class ERPNextClient:
         if customer:
             filters.append(["customer", "=", customer])
 
+        if from_date:
+            filters.append(["transaction_date", ">=", from_date])
+
+        if to_date:
+            filters.append(["transaction_date", "<=", to_date])
+
+        # CRITICAL: Do NOT include 'doctype' in params when using Resource API
+        # The doctype is already in the URL path: /api/resource/Sales Order
         params: Dict[str, Any] = {
-            "doctype": "Sales Order",
             "filters": json.dumps(filters),
             "fields": json.dumps(
                 [
                     "name",
                     "customer",
-                    "delivery_date",
                     "transaction_date",
+                    "delivery_date",
                     "status",
-                    "total_qty",
+                    "grand_total",
                 ]
             ),
             "order_by": "transaction_date desc",
-            "limit_page_length": limit,
+            "limit_page_length": min(limit, 100),
             "limit_start": offset,
         }
 
@@ -238,6 +277,10 @@ class ERPNextClient:
 
         response = self.client.get("/api/resource/Sales Order", params=params)
         data = self._handle_response(response)
+        
+        # Resource API returns list directly or wrapped in "data"
+        if isinstance(data, dict) and "data" in data:
+            return data["data"] if isinstance(data["data"], list) else []
         return data if isinstance(data, list) else []
 
     def add_comment_to_doc(

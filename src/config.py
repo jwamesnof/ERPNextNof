@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     cutoff_time: str = "14:00"
     timezone: str = "UTC"
     lead_time_buffer_days: int = 1
+    delivery_model: str = "latest_acceptable"
 
     class Config:
         env_file = ".env"

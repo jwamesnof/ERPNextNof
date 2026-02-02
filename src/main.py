@@ -93,6 +93,14 @@ async def startup_event():
     logger.info(f"Environment: {settings.otp_service_env}")
     logger.info(f"ERPNext URL: {settings.erpnext_base_url}")
     logger.info(f"API Documentation: http://{settings.otp_service_host}:{settings.otp_service_port}/docs")
+    
+    # Log all registered routes for debugging
+    logger.info("\n=== Registered Routes ===")
+    for route in app.routes:
+        if hasattr(route, "path") and hasattr(route, "methods"):
+            if "sales" in route.path.lower():
+                logger.info(f"  {route.methods} {route.path}")
+    logger.info("=== End Routes ===\n")
 
 
 # Shutdown event
