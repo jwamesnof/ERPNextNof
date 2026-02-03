@@ -17,10 +17,6 @@ class Settings(BaseSettings):
     otp_service_port: int = 8001
     otp_service_env: str = "development"
 
-    # Mock supply data (used when ERPNext is unavailable)
-    use_mock_supply: bool = True
-    mock_data_file: str = "data/Sales Invoice.csv"
-
     # Test Configuration
     run_integration: bool = False
     erpnext_test_username: str = "Administrator"
@@ -32,12 +28,7 @@ class Settings(BaseSettings):
     cutoff_time: str = "14:00"
     timezone: str = "UTC"
     lead_time_buffer_days: int = 1
-    
-    # Processing Lead Time (warehouse handling: picking, packing, QA, staging, carrier booking)
-    # "Processing lead time represents internal warehouse handling time between
-    # item availability and shipment, modeled as a configurable deterministic value
-    # to produce reliable promise dates."
-    processing_lead_time_days_default: int = 1
+    delivery_model: str = "latest_acceptable"
 
     class Config:
         env_file = ".env"

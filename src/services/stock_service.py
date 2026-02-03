@@ -30,10 +30,16 @@ class StockService:
         try:
             if warehouse:
                 bin_data = self.client.get_bin_details(item_code, warehouse)
+                logger.info(f"DEBUG: get_bin_details returned: {bin_data}")
+                actual_qty = bin_data.get("actual_qty", 0.0)
+                reserved_qty = bin_data.get("reserved_qty", 0.0)
+                available_qty = actual_qty - reserved_qty
+                logger.info(f"DEBUG: {item_code} in {warehouse} - actual={actual_qty}, reserved={reserved_qty}, available={available_qty}")
+                
                 return {
-                    "actual_qty": bin_data.get("actual_qty", 0.0),
-                    "reserved_qty": bin_data.get("reserved_qty", 0.0),
-                    "available_qty": bin_data.get("projected_qty", 0.0),
+                    "actual_qty": actual_qty,
+                    "reserved_qty": reserved_qty,
+                    "available_qty": max(0.0, available_qty),  # Can't be negative
                 }
             else:
                 # Get stock across all warehouses (simplified for MVP)

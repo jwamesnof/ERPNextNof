@@ -7,7 +7,6 @@ from src.clients.erpnext_client import ERPNextClient, ERPNextClientError
 from src.services.promise_service import PromiseService
 from src.models.request_models import PromiseRules, ItemRequest
 from src.services.stock_service import StockService
-from src.utils.warehouse_utils import default_warehouse_manager
 
 
 def print_section(title: str):
@@ -29,18 +28,14 @@ def fetch_recent_sales_orders(client: ERPNextClient, limit: int = 10) -> List[Di
         print_section("Fetching Recent Sales Orders")
         
         orders = client.get_sales_order_list(
-            filters=[],
-            fields=["name", "customer", "creation", "delivery_date", "grand_total", "docstatus"],
-            limit=limit,
-            order_by="name asc"
+            limit=limit
         )
         
         print(f"OK Found {len(orders)} recent sales orders")
         for idx, order in enumerate(orders, 1):
-            status_map = {0: "Draft", 1: "Submitted", 2: "Cancelled"}
-            status_text = status_map.get(order.get('docstatus'), 'Unknown')
             delivery = order.get('delivery_date', 'N/A')
-            print(f"  {idx}. {order.get('name')} - {order.get('customer')} - Delivery: {delivery} ({status_text})")
+            status = order.get('status', 'Unknown')
+            print(f"  {idx}. {order.get('name')} - {order.get('customer')} - Delivery: {delivery} ({status})")
         
         return orders
     
@@ -94,11 +89,8 @@ def test_otp_calculation(order: Dict[str, Any]):
         
         # Initialize services with ERPNext client
         client = ERPNextClient()
-        stock_service = StockService(erpnext_client=client)
-        promise_service = PromiseService(
-            stock_service=stock_service,
-            warehouse_manager=default_warehouse_manager
-        )
+        stock_service = StockService(client)
+        promise_service = PromiseService(stock_service)
         
         # Define rules with calendar handling
         rules = PromiseRules(
@@ -128,14 +120,8 @@ def test_otp_calculation(order: Dict[str, Any]):
                 # Get incoming supply
                 incoming = stock_service.get_incoming_supply(item_data['item_code'])
                 print(f"  Incoming Supply:")
-                if incoming.get('access_error'):
-                    error_type = incoming['access_error']
-                    if error_type == 'permission_denied':
-                        print(f"     WARNING: Permission denied (403) - cannot access PO data")
-                    else:
-                        print(f"     WARNING: Access error - cannot retrieve PO data")
-                elif incoming['supply']:
-                    for po in incoming['supply']:
+                if incoming:
+                    for po in incoming:
                         print(f"     • {po['po_id']}: {po['qty']} units -> {po['expected_date']}")
                 else:
                     print(f"     • (No open purchase orders)")

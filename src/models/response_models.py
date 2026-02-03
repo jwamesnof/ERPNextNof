@@ -90,3 +90,63 @@ class HealthResponse(BaseModel):
     version: str = "0.1.0"
     erpnext_connected: bool = False
     message: Optional[str] = None
+
+
+class SalesOrderItem(BaseModel):
+    """Lightweight Sales Order item for list responses."""
+
+    name: str = Field(..., description="Sales Order ID")
+    customer: str = Field(..., description="Customer name")
+    transaction_date: date = Field(..., description="Sales Order date")
+    delivery_date: Optional[date] = Field(None, description="Expected delivery date")
+    status: Optional[str] = Field(None, description="Sales Order status")
+    grand_total: Optional[float] = Field(None, description="Total order amount")
+
+
+class SalesOrderListResponse(BaseModel):
+    """Response for GET /otp/sales-orders endpoint."""
+
+    items: List[SalesOrderItem] = Field(..., description="List of Sales Orders")
+    count: int = Field(..., description="Total number of items")
+
+
+class SalesOrderSummary(BaseModel):
+    """Sales Order summary for list endpoint (deprecated - use SalesOrderItem)."""
+
+    name: str = Field(..., description="Sales Order ID")
+    customer: str = Field(..., description="Customer name")
+    transaction_date: date = Field(..., description="Sales Order date")
+    delivery_date: Optional[date] = Field(None, description="Expected delivery date")
+    status: Optional[str] = Field(None, description="Sales Order status")
+
+
+class SalesOrderDetailItem(BaseModel):
+    """Detailed Sales Order item for details endpoint."""
+
+    item_code: str = Field(..., description="Item code")
+    item_name: Optional[str] = Field(None, description="Item name")
+    qty: float = Field(..., description="Quantity ordered")
+    uom: Optional[str] = Field(None, description="Unit of measure")
+    warehouse: Optional[str] = Field(None, description="Warehouse")
+
+
+class SalesOrderDefaults(BaseModel):
+    """Default UI settings for OTP screens."""
+
+    warehouse: Optional[str] = Field(None, description="Default warehouse")
+    delivery_model: str = Field(..., description="Delivery model for UI")
+    cutoff_time: str = Field(..., description="Daily cutoff time (HH:MM)")
+    no_weekends: bool = Field(..., description="Skip weekend dates")
+
+
+class SalesOrderDetailsResponse(BaseModel):
+    """Detailed Sales Order response for details endpoint."""
+
+    id: str = Field(..., description="Sales Order ID")
+    customer_name: str = Field(..., description="Customer name")
+    transaction_date: date = Field(..., description="Sales Order date")
+    delivery_date: Optional[date] = Field(None, description="Expected delivery date")
+    status: Optional[str] = Field(None, description="Sales Order status")
+    grand_total: Optional[float] = Field(None, description="Total order amount")
+    items: List[SalesOrderDetailItem] = Field(..., description="Sales Order items")
+    defaults: SalesOrderDefaults = Field(..., description="Default UI settings")
