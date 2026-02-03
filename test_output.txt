@@ -1,0 +1,7 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.2, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\NofJawamis\Desktop\ERPNextNof\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\NofJawamis\Desktop\ERPNextNof
+configfile: pytest.ini (WARNING: ignoring pytest config in pyproject.toml!)
+plugins: anyio-4.12.1, cov-7.0.0
+collecting ... 

@@ -32,6 +32,7 @@ htmlcov/
 coverage.xml
 *.cover
 .hypothesis/
+allure-results/
 
 # Playwright
 test-results/

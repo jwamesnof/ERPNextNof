@@ -136,9 +136,6 @@ class ERPNextClient:
         """
         Get open purchase orders with expected delivery for an item.
         
-        Workaround: Query Purchase Orders directly and extract items with matching item_code.
-        This avoids the permission issue with Purchase Order Item child table.
-        
         Returns list of:
             {
                 "po_id": "PO-00123",
@@ -149,57 +146,43 @@ class ERPNextClient:
                 "schedule_date": "2026-02-03"
             }
         """
-        try:
-            # Query all Purchase Orders that are submitted and not fully received
-            params = {
-                "filters": json.dumps([
-                    ["docstatus", "=", 1],  # Submitted
-                ]),
-                "fields": json.dumps(["name"]),
-                "limit_page_length": 500,
-            }
+        params = {
+            "filters": json.dumps([
+                ["item_code", "=", item_code],
+                ["docstatus", "=", 1],  # Submitted
+                ["qty", ">", "received_qty"],  # Not fully received
+            ]),
+            "fields": json.dumps([
+                "parent",
+                "item_code",
+                "qty",
+                "received_qty",
+                "schedule_date",
+                "warehouse",
+            ]),
+            "order_by": "schedule_date asc",
+            "limit_page_length": 500,
+        }
 
-            response = self.client.get("/api/resource/Purchase Order", params=params)
-            pos = self._handle_response(response)
+        response = self.client.get("/api/resource/Purchase Order Item", params=params)
+        items = self._handle_response(response)
 
-            # Extract items with matching item_code from each PO
-            result = []
-            for po_name in (pos if isinstance(pos, list) else []):
-                # Get individual PO with items
-                po_id = po_name if isinstance(po_name, str) else po_name.get("name")
-                
-                po_response = self.client.get(f"/api/resource/Purchase Order/{po_id}")
-                po = self._handle_response(po_response)
-                
-                if not po:
-                    continue
-                    
-                po_items = po.get("items", [])
-                for item in po_items:
-                    if item.get("item_code") == item_code:
-                        # Check if not fully received
-                        qty = item.get("qty", 0)
-                        received_qty = item.get("received_qty", 0)
-                        if qty > received_qty:
-                            result.append(
-                                {
-                                    "po_id": po.get("name"),
-                                    "item_code": item.get("item_code"),
-                                    "qty": qty,
-                                    "received_qty": received_qty,
-                                    "pending_qty": qty - received_qty,
-                                    "schedule_date": item.get("schedule_date"),
-                                    "warehouse": item.get("warehouse"),
-                                }
-                            )
-            
-            # Sort by schedule_date
-            result.sort(key=lambda x: x.get("schedule_date", ""), reverse=False)
-            return result
-            
-        except Exception as e:
-            logger.error(f"Error querying incoming purchase orders for {item_code}: {e}")
-            return []
+        # Transform to our format
+        result = []
+        for item in items if isinstance(items, list) else []:
+            result.append(
+                {
+                    "po_id": item.get("parent"),
+                    "item_code": item.get("item_code"),
+                    "qty": item.get("qty", 0),
+                    "received_qty": item.get("received_qty", 0),
+                    "pending_qty": item.get("qty", 0) - item.get("received_qty", 0),
+                    "schedule_date": item.get("schedule_date"),
+                    "warehouse": item.get("warehouse"),
+                }
+            )
+
+        return result
 
     def get_sales_order(self, sales_order_id: str) -> Dict[str, Any]:
         """Get Sales Order details."""

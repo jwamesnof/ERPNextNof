@@ -77,7 +77,7 @@ docker-compose up --build
 ```bash
 # Create virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source .venv/Scripts/activate  # If not Windows: venv/bin/activate  
 
 # Install dependencies
 pip install -r requirements.txt
