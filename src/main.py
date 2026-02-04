@@ -3,7 +3,7 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from src.routes import otp, demo_data
+from src.routes import otp, items
 from src.models.response_models import HealthResponse
 from src.clients.erpnext_client import ERPNextClient
 from src.config import settings
@@ -83,7 +83,7 @@ async def health_check():
 
 # Include routers
 app.include_router(otp.router)
-app.include_router(demo_data.router)
+app.include_router(items.router)
 
 
 # Startup event
