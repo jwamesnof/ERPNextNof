@@ -128,6 +128,9 @@ class SalesOrderDetailItem(BaseModel):
     qty: float = Field(..., description="Quantity ordered")
     uom: Optional[str] = Field(None, description="Unit of measure")
     warehouse: Optional[str] = Field(None, description="Warehouse")
+    stock_actual: float = Field(0.0, description="Actual stock quantity")
+    stock_reserved: float = Field(0.0, description="Reserved stock quantity")
+    stock_available: float = Field(0.0, description="Available stock (actual - reserved)")
 
 
 class SalesOrderDefaults(BaseModel):

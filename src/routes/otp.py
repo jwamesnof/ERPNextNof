@@ -293,13 +293,32 @@ async def get_sales_order_details(
 
         items = []
         for item in order.get("items") or []:
+            warehouse = item.get("warehouse") or item.get("target_warehouse")
+            item_code = item.get("item_code")
+            
+            # Fetch stock details for this item
+            stock_data = {}
+            if warehouse and item_code:
+                try:
+                    stock_data = client.get_bin_details(item_code, warehouse)
+                except Exception as e:
+                    logger.warning(f"Could not fetch stock for {item_code} in {warehouse}: {e}")
+                    stock_data = {}
+            
+            stock_actual = float(stock_data.get("actual_qty", 0.0))
+            stock_reserved = float(stock_data.get("reserved_qty", 0.0))
+            stock_available = stock_actual - stock_reserved
+            
             items.append(
                 SalesOrderDetailItem(
-                    item_code=item.get("item_code"),
+                    item_code=item_code,
                     item_name=item.get("item_name"),
                     qty=item.get("qty", 0),
                     uom=item.get("uom"),
-                    warehouse=item.get("warehouse") or item.get("target_warehouse"),
+                    warehouse=warehouse,
+                    stock_actual=stock_actual,
+                    stock_reserved=stock_reserved,
+                    stock_available=stock_available,
                 )
             )
 
@@ -333,3 +352,4 @@ async def get_sales_order_details(
             exc_info=True,
         )
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
