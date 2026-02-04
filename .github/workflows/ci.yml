@@ -3,8 +3,6 @@ name: CI - Tests and Coverage
 on:
   pull_request:
     branches: [main, develop]
-  push:
-    branches: [main, develop]
 
 jobs:
   test:
@@ -58,6 +56,7 @@ jobs:
       - name: Generate coverage badge
         run: |
           coverage report --format=markdown > coverage_report.md
+          coverage report
 
       - name: Archive test results
         if: always()
