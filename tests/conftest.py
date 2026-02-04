@@ -21,8 +21,14 @@ from src.config import settings
 
 @pytest.fixture(scope="session")
 def today():
-    """Fixture providing today's date (session-scoped for efficiency)."""
-    return date.today()
+    """
+    Fixture providing today's date matching the service's timezone logic.
+    Uses UTC like the promise_service._get_today() method to avoid timezone mismatches.
+    """
+    import pytz
+    from datetime import datetime
+    tz = pytz.timezone('UTC')
+    return datetime.now(tz).date()
 
 
 @pytest.fixture(scope="function")

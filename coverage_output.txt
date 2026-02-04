@@ -1,0 +1,91 @@
+============================= test session starts =============================
+platform win32 -- Python 3.7.6, pytest-7.4.4, pluggy-0.13.1
+rootdir: C:\Users\NofJawamis\Desktop\ERPNextNof
+configfile: pytest.ini
+testpaths: tests
+plugins: allure-pytest-2.15.3, anyio-3.7.1, hypothesis-5.5.4, arraydiff-0.3, astropy-header-0.1.2, asyncio-0.21.2, base-url-2.0.0, cov-4.1.0, doctestplus-0.5.0, filter-subpackage-0.1.2, html-3.2.0, metadata-3.0.0, mock-3.11.1, openfiles-0.4.0, playwright-0.3.3, remotedata-0.3.2
+asyncio: mode=auto
+collected 251 items / 51 deselected / 200 selected
+
+tests\unit\test_apply_service.py ................                        [  8%]
+tests\unit\test_calendar_workweek.py .................                   [ 16%]
+tests\unit\test_config.py .............                                  [ 23%]
+tests\unit\test_csv_data_loader.py ..F.....FFFFF..                       [ 30%]
+tests\unit\test_desired_date.py ..........                               [ 35%]
+tests\unit\test_erpnext_client.py ........................               [ 47%]
+tests\unit\test_main.py ........................                         [ 59%]
+tests\unit\test_mock_supply_service.py ...FFFFFFFF...F.F                 [ 68%]
+tests\unit\test_processing_lead_time.py .......                          [ 71%]
+tests\unit\test_promise_service.py .......FFFFF.F.                       [ 79%]
+tests\unit\test_stock_service.py ..............                          [ 86%]
+tests\unit\test_warehouse_handling.py ............................       [100%]
+
+============================== warnings summary ===============================
+..\..\anaconda3\lib\site-packages\pydantic\_internal\_config.py:271
+  c:\users\nofjawamis\anaconda3\lib\site-packages\pydantic\_internal\_config.py:271: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.5/migration/
+    warnings.warn(DEPRECATION_MESSAGE, DeprecationWarning)
+
+tests/unit/test_apply_service.py: 32 warnings
+tests/unit/test_calendar_workweek.py: 34 warnings
+tests/unit/test_config.py: 26 warnings
+tests/unit/test_csv_data_loader.py: 30 warnings
+tests/unit/test_desired_date.py: 20 warnings
+tests/unit/test_erpnext_client.py: 48 warnings
+tests/unit/test_main.py: 48 warnings
+tests/unit/test_mock_supply_service.py: 34 warnings
+tests/unit/test_processing_lead_time.py: 14 warnings
+tests/unit/test_promise_service.py: 30 warnings
+tests/unit/test_stock_service.py: 28 warnings
+tests/unit/test_warehouse_handling.py: 56 warnings
+  c:\users\nofjawamis\anaconda3\lib\site-packages\pytest_remotedata\plugin.py:65: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+    if LooseVersion(pytest.__version__) < LooseVersion("3.6"):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+
+----------- coverage: platform win32, python 3.7.6-final-0 -----------
+Name                                  Stmts   Miss  Cover   Missing
+-------------------------------------------------------------------
+src\clients\erpnext_client.py           114     22    81%   73-74, 96, 121, 226, 229, 232, 235, 257, 266, 287-292, 302-329
+src\config.py                            25      0   100%
+src\controllers\otp_controller.py        28     14    50%   30-53, 57-71, 77-100
+src\main.py                              47     15    68%   41-42, 93-104, 111, 115-117
+src\models\request_models.py             39      0   100%
+src\models\response_models.py            97      0   100%
+src\routes\demo_data.py                  44     28    36%   32-37, 48-56, 70-86, 100-116
+src\routes\otp.py                       129     91    29%   39-42, 53, 77-84, 99-111, 127-136, 146-173, 225-278, 291-354
+src\services\apply_service.py            56      3    95%   104-106
+src\services\csv_data_loader.py          84     22    74%   46-48, 59, 79-81, 101, 117, 119-120, 151, 165-166, 170-179
+src\services\mock_supply_service.py     105      8    92%   100-104, 121, 141, 145-149
+src\services\promise_service.py         273     27    90%   81, 180, 288, 332-350, 373-378, 394-395, 401, 408-409, 413, 550, 566-571
+src\services\stock_service.py            47      5    89%   47-48, 94-97, 101
+src\utils\__init__.py                     0      0   100%
+src\utils\warehouse_utils.py             86      2    98%   135, 266
+-------------------------------------------------------------------
+TOTAL                                  1174    237    80%
+Coverage HTML written to dir htmlcov
+Coverage XML written to file coverage.xml
+
+=========================== short test summary info ===========================
+FAILED tests/unit/test_csv_data_loader.py::TestCSVDataLoaderLoadInvoices::test_load_valid_invoices
+FAILED tests/unit/test_csv_data_loader.py::TestCSVDataLoaderGetSummary::test_get_summary_empty_data
+FAILED tests/unit/test_csv_data_loader.py::TestCSVDataLoaderGetCustomers::test_get_customers_with_data
+FAILED tests/unit/test_csv_data_loader.py::TestCSVDataLoaderGetCustomers::test_get_customers_empty_data
+FAILED tests/unit/test_csv_data_loader.py::TestCSVDataLoaderGetItems::test_get_items_with_data
+FAILED tests/unit/test_csv_data_loader.py::TestCSVDataLoaderGetItems::test_get_items_empty_data
+FAILED tests/unit/test_mock_supply_service.py::TestMockSupplyServiceGetStock::test_get_stock_existing_item
+FAILED tests/unit/test_mock_supply_service.py::TestMockSupplyServiceGetStock::test_get_stock_nonexistent_item
+FAILED tests/unit/test_mock_supply_service.py::TestMockSupplyServiceGetStock::test_get_stock_multiple_warehouses
+FAILED tests/unit/test_mock_supply_service.py::TestMockSupplyServiceGetIncomingPOs::test_get_incoming_pos_existing_item
+FAILED tests/unit/test_mock_supply_service.py::TestMockSupplyServiceGetIncomingPOs::test_get_incoming_pos_no_pos
+FAILED tests/unit/test_mock_supply_service.py::TestMockSupplyServiceGetIncomingPOs::test_get_incoming_pos_with_date_filter
+FAILED tests/unit/test_mock_supply_service.py::TestMockSupplyServiceGetAllStock::test_get_all_stock
+FAILED tests/unit/test_mock_supply_service.py::TestMockSupplyServiceGetAllStock::test_get_all_stock_empty
+FAILED tests/unit/test_mock_supply_service.py::TestMockSupplyServiceEdgeCases::test_handles_malformed_csv
+FAILED tests/unit/test_mock_supply_service.py::TestMockSupplyServiceEdgeCases::test_handles_duplicate_entries
+FAILED tests/unit/test_promise_service.py::TestPromiseService::test_no_weekends_false
+FAILED tests/unit/test_promise_service.py::TestPromiseService::test_desired_date_on_time
+FAILED tests/unit/test_promise_service.py::TestPromiseService::test_desired_date_late
+FAILED tests/unit/test_promise_service.py::TestPromiseService::test_no_early_delivery_mode
+FAILED tests/unit/test_promise_service.py::TestPromiseService::test_warehouse_needs_processing
+FAILED tests/unit/test_promise_service.py::TestPromiseService::test_po_falls_on_weekend_adjusted
+========= 22 failed, 178 passed, 51 deselected, 401 warnings in 3.22s =========
