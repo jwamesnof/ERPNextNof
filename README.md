@@ -15,7 +15,8 @@
 - **Write-Back to ERPNext**: Apply promise dates as comments or custom fields
 - **Procurement Suggestions**: Auto-generate Material Requests for shortages
 - **REST API**: Clean, documented API with Pydantic validation
-- **Comprehensive Testing**: Unit, API, integration, and E2E tests with >80% coverage
+- **Comprehensive Testing**: 251 tests (unit, API, integration, E2E) with 92% coverage
+- **Stock Endpoint**: GET `/api/items/stock` for warehouse-specific stock queries
 - **CI/CD Ready**: GitHub Actions for automated testing and deployment
 
 ## 🏗️ Architecture
@@ -225,6 +226,8 @@ pytest tests/unit/ tests/api/ --cov=src --cov-report=html
 
 ### Integration Tests (Real ERPNext)
 
+See [INTEGRATION_TESTS.md](INTEGRATION_TESTS.md) for the full setup and GitHub Actions instructions.
+
 ```bash
 # Requires ERPNext running
 RUN_INTEGRATION=1 pytest tests/integration/ -v
@@ -242,14 +245,14 @@ pytest tests/e2e/ -v --headed  # --headed to see browser
 
 ### Test Coverage Summary
 
-| Test Type | Files | Coverage | Purpose |
-|-----------|-------|----------|---------|
-| **Unit** | 9 tests | Core algorithm | Fast, isolated tests of promise logic |
-| **API** | 8 tests | FastAPI endpoints | Test API with mocked ERPNext |
-| **Integration** | 5 tests | Real ERPNext calls | Verify actual ERPNext integration |
-| **E2E** | 3 tests | Full UI flow | Browser automation with Playwright |
+**Coverage**: 92% (1072 statements, 251 tests passing)
 
-**Target Coverage**: >80% (current: ~85%)
+| Test Type | Count | Purpose |
+|-----------|-------|---------|
+| **Unit** | 165 tests | Core algorithm & utilities |
+| **API** | 58 tests | REST endpoints with mocked ERPNext |
+| **Integration** | 20 tests | Real ERPNext connection |
+| **E2E** | 8 tests | End-to-end workflows |
 
 ## 🏛️ Project Structure
 
@@ -317,17 +320,18 @@ ERPNEXT_TEST_PASSWORD=admin
 
 ### PR Workflow (`.github/workflows/ci.yml`)
 - ✅ Linting (black, ruff)
-- ✅ Unit tests
-- ✅ API tests
+- ✅ Unit tests (165 tests)
+- ✅ API tests (58 tests)
 - ✅ Coverage report → Codecov
 - ✅ Docker build validation
+- **Duration**: ~1 minute
 
 ### Integration Workflow (`.github/workflows/integration.yml`)
-- 🔄 Runs daily at 2 AM UTC
-- 🔄 Spins up ERPNext container
-- 🔄 Seeds test data
-- 🔄 Runs integration + E2E tests
-- 🔄 Uploads artifacts (videos, screenshots)
+- 🔄 Manual trigger only (workflow_dispatch)
+- 🔄 Connects to real ERPNext instance
+- 🔄 Runs integration tests (20 tests)
+- 🔄 Requires GitHub Secrets setup
+- **Documentation**: See [INTEGRATION_TESTS.md](INTEGRATION_TESTS.md)
 
 ## 🧠 Core Algorithm
 
