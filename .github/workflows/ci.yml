@@ -41,14 +41,14 @@ jobs:
           ERPNEXT_API_KEY: test-api-key
           ERPNEXT_API_SECRET: test-api-secret
         run: |
-          pytest tests/unit/ -v --cov=src --cov-report=xml --cov-report=term
+          pytest tests/unit/ -v --cov=src --cov-report=xml --cov-report=term --alluredir=allure-results
 
       - name: Run API tests
         env:
           ERPNEXT_API_KEY: test-api-key
           ERPNEXT_API_SECRET: test-api-secret
         run: |
-          pytest tests/api/ -v --cov=src --cov-append --cov-report=xml --cov-report=term
+          pytest tests/api/ -v --cov=src --cov-append --cov-report=xml --cov-report=term --alluredir=allure-results
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -63,6 +63,30 @@ jobs:
         run: |
           coverage report --format=markdown > coverage_report.md
           coverage report
+
+      - name: Get Allure history
+        uses: actions/checkout@v4
+        if: always()
+        continue-on-error: true
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Generate Allure Report
+        uses: simple-elf/allure-report-action@master
+        if: always()
+        with:
+          allure_results: allure-results
+          allure_history: allure-history
+          keep_reports: 20
+
+      - name: Deploy Allure report to GitHub Pages
+        if: always()
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-history
 
       - name: Archive test results
         if: always()

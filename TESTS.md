@@ -48,6 +48,37 @@ pytest --cov=src --cov-report=html
 pytest --cov=src --cov-report=term-missing
 ```
 
+### Allure Reports
+
+Allure provides beautiful interactive test reports with detailed test execution information.
+
+```bash
+# Run tests and generate Allure results (already configured in pytest.ini)
+pytest tests/
+
+# Generate and open Allure report locally
+allure serve allure-results
+
+# Or generate static HTML report
+allure generate allure-results -o allure-report --clean
+# Open allure-report/index.html in browser
+```
+
+**View Online Reports:**
+- After pushing to GitHub, Allure reports are automatically published to GitHub Pages
+- Access at: `https://yourusername.github.io/ERPNextNof/`
+
+**Install Allure CLI (optional for local viewing):**
+```bash
+# macOS
+brew install allure
+
+# Windows (using Scoop)
+scoop install allure
+
+# Or download from https://github.com/allure-framework/allure2/releases
+```
+
 ---
 
 ## 🎯 Test Suite Overview
