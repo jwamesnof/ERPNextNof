@@ -92,4 +92,7 @@ jobs:
 
       - name: Test Docker image
         run: |
-          docker run --rm erpnext-otp:latest python -c "import src.main; print('Import successful')"
+          docker run --rm \
+            -e ERPNEXT_API_KEY=test-api-key \
+            -e ERPNEXT_API_SECRET=test-api-secret \
+            erpnext-otp:latest python -c "import src.main; print('Import successful')"
