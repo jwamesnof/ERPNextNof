@@ -46,6 +46,12 @@ jobs:
           allure_history: allure-history
           keep_reports: 20
 
+      - name: Ensure allure-history directory exists
+        if: always()
+        run: |
+          mkdir -p allure-history
+          ls -la allure-history || echo "Directory created"
+
       - name: Deploy Allure report to GitHub Pages
         if: always()
         continue-on-error: true
