@@ -6,6 +6,8 @@ from src.services.promise_service import PromiseService
 from src.services.stock_service import StockService
 from src.models.request_models import ItemRequest, PromiseRules
 
+pytestmark = pytest.mark.unit
+
 
 @pytest.mark.unit
 class TestProcessingLeadTime:

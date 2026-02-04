@@ -6,6 +6,8 @@ from src.main import app
 from src.config import settings
 from src.clients.erpnext_client import ERPNextClientError
 
+pytestmark = pytest.mark.api
+
 
 client = TestClient(app)
 

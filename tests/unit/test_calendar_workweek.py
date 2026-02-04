@@ -5,6 +5,8 @@ from src.services.promise_service import PromiseService
 from src.services.mock_supply_service import MockSupplyService
 from src.models.request_models import ItemRequest, PromiseRules
 
+pytestmark = pytest.mark.unit
+
 
 class TestCalendarUtilities:
     """Test basic calendar utility functions without hardcoded dates."""

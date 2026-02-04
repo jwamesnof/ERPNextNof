@@ -7,6 +7,8 @@ from src.services.stock_service import StockService
 from src.models.request_models import ItemRequest, PromiseRules, DesiredDateMode
 from src.models.response_models import PromiseResponse
 
+pytestmark = pytest.mark.unit
+
 
 @pytest.mark.unit
 class TestDesiredDateHandling:

@@ -4,6 +4,8 @@ import os
 from unittest.mock import patch, MagicMock
 from pydantic import ValidationError
 
+pytestmark = pytest.mark.unit
+
 
 class TestSettingsConfiguration:
     """Test suite for Settings configuration."""

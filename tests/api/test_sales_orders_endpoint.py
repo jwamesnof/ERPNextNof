@@ -5,6 +5,8 @@ from unittest.mock import patch, MagicMock, call
 import json
 from src.main import app
 
+pytestmark = pytest.mark.api
+
 
 client = TestClient(app)
 

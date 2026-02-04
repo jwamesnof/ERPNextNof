@@ -14,6 +14,8 @@ from src.services.promise_service import PromiseService
 from src.services.mock_supply_service import MockSupplyService
 from src.models.request_models import ItemRequest, PromiseRules
 
+pytestmark = pytest.mark.unit
+
 
 class TestWarehouseClassification:
     """Test warehouse classification logic."""
@@ -61,6 +63,39 @@ class TestWarehouseClassification:
         assert wm.classify_warehouse("Finished Items") == WarehouseType.NEEDS_PROCESSING
         # Default to SELLABLE
         assert wm.classify_warehouse("Custom Warehouse") == WarehouseType.SELLABLE
+
+    def test_custom_classifications(self):
+        """Test custom warehouse classifications."""
+        custom_classifications = {
+            "custom stores": WarehouseType.SELLABLE,
+            "custom transit": WarehouseType.IN_TRANSIT
+        }
+        wm = WarehouseManager(custom_classifications=custom_classifications)
+        assert wm.classify_warehouse("Custom Stores") == WarehouseType.SELLABLE
+        assert wm.classify_warehouse("Custom Transit") == WarehouseType.IN_TRANSIT
+
+    def test_custom_hierarchy(self):
+        """Test custom warehouse hierarchy."""
+        custom_hierarchy = {
+            "custom group": ["child1", "child2"]
+        }
+        wm = WarehouseManager(custom_hierarchy=custom_hierarchy)
+        children = wm.get_child_warehouses("Custom Group")
+        assert "child1" in children
+        assert "child2" in children
+
+    def test_empty_warehouse_name(self):
+        """Test empty warehouse name defaults to SELLABLE."""
+        wm = WarehouseManager()
+        assert wm.classify_warehouse("") == WarehouseType.SELLABLE
+        assert wm.classify_warehouse(None) == WarehouseType.SELLABLE
+
+    def test_scrap_reject_pattern(self):
+        """Test scrap and reject warehouses are NOT_AVAILABLE."""
+        wm = WarehouseManager()
+        assert wm.classify_warehouse("Scrap Warehouse") == WarehouseType.NOT_AVAILABLE
+        assert wm.classify_warehouse("Rejected Items") == WarehouseType.NOT_AVAILABLE
+        assert wm.classify_warehouse("Reject Bin") == WarehouseType.NOT_AVAILABLE
 
 
 class TestWarehouseGroupExpansion:
@@ -120,6 +155,27 @@ class TestWarehouseGroupExpansion:
         assert "Goods In Transit - SD" not in available
         assert "Work In Progress - SD" not in available
 
+    def test_expand_no_deduplicate(self):
+        """Expand list without deduplication keeps duplicates."""
+        wm = WarehouseManager()
+        warehouses = ["Stores - SD", "Stores - SD", "Finished Goods - SD"]
+        expanded = wm.expand_warehouse_list(warehouses, deduplicate=False)
+        assert expanded.count("Stores - SD") == 2  # Duplicates preserved
+
+    def test_expand_group_no_children(self):
+        """Expand group warehouse with no children defined."""
+        custom_hierarchy = {
+            "empty group": []
+        }
+        wm = WarehouseManager(custom_hierarchy=custom_hierarchy)
+        # Create a custom classification for this group
+        wm.classifications["empty group"] = WarehouseType.GROUP
+        warehouses = ["Empty Group", "Stores - SD"]
+        expanded = wm.expand_warehouse_list(warehouses)
+        # Empty group should be skipped (logged as warning)
+        assert "Empty Group" not in expanded
+        assert "Stores - SD" in expanded
+
 
 class TestWarehouseAvailabilityReasons:
     """Test warehouse availability reason generation."""
@@ -147,6 +203,13 @@ class TestWarehouseAvailabilityReasons:
         wm = WarehouseManager()
         reason = wm.get_availability_reason("Work In Progress - SD", 30)
         assert "not available" in reason.lower()
+
+    def test_group_reason(self):
+        """GROUP warehouse reason."""
+        wm = WarehouseManager()
+        reason = wm.get_availability_reason("All Warehouses - SD", 100)
+        assert "group warehouse" in reason.lower()
+        assert "expand" in reason.lower()
 
 
 class TestPromiseCalculationWithWarehouses:

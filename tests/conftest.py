@@ -9,19 +9,25 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import MagicMock, patch
+try:
+    from unittest.mock import AsyncMock
+except ImportError:
+    # AsyncMock not available in Python < 3.8, create a simple mock
+    from unittest.mock import MagicMock
+    AsyncMock = MagicMock
 from src.config import settings
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def today():
-    """Fixture providing today's date."""
+    """Fixture providing today's date (session-scoped for efficiency)."""
     return date.today()
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def mock_erpnext_client():
-    """Fixture providing a mocked ERPNext client."""
+    """Fixture providing a mocked ERPNext client (function-scoped to avoid state pollution)."""
     client = MagicMock()
     # These methods are actually SYNCHRONOUS, not async
     client.get_bin_details = MagicMock()
@@ -38,9 +44,9 @@ def mock_erpnext_client():
     return client
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def mock_warehouse_manager():
-    """Fixture providing a mocked warehouse manager."""
+    """Fixture providing a mocked warehouse manager (module-scoped)."""
     manager = MagicMock()
     manager.get_warehouse_group = MagicMock(return_value="Main")
     manager.is_warehouse_available = MagicMock(return_value=True)
@@ -49,9 +55,9 @@ def mock_warehouse_manager():
     return manager
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def sample_promise_request():
-    """Fixture providing a sample promise request."""
+    """Fixture providing a sample promise request (module-scoped)."""
     from src.models.request_models import (
         PromiseRequest, ItemRequest, PromiseRules, DesiredDateMode
     )
@@ -75,9 +81,9 @@ def sample_promise_request():
     )
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def sample_promise_response():
-    """Fixture providing a sample promise response."""
+    """Fixture providing a sample promise response (module-scoped)."""
     from src.models.response_models import (
         PromiseResponse, ItemPlan, FulfillmentSource, PromiseStatus
     )
@@ -112,9 +118,9 @@ def sample_promise_response():
     )
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def mock_stock_data():
-    """Fixture providing mock stock data."""
+    """Fixture providing mock stock data (module-scoped)."""
     return {
         "ITEM-001": {
             "warehouse": "WH-Main",
@@ -133,9 +139,9 @@ def mock_stock_data():
     }
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def mock_purchase_orders():
-    """Fixture providing mock purchase order data."""
+    """Fixture providing mock purchase order data (module-scoped)."""
     return [
         {
             "name": "PO-001",
@@ -166,7 +172,7 @@ def mock_purchase_orders():
 
 @pytest.fixture
 def mock_http_client():
-    """Fixture providing a mocked HTTP client."""
+    """Fixture providing a mocked HTTP client (function-scoped for safety)."""
     client = MagicMock()
     client.get = AsyncMock()
     client.post = AsyncMock()

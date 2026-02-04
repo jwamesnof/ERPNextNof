@@ -6,10 +6,13 @@ from src.main import app
 from src.config import settings
 
 # Skip all tests in this file if run_integration is False
-pytestmark = pytest.mark.skipif(
-    not settings.run_integration,
-    reason="Integration tests disabled. Set RUN_INTEGRATION=true in .env to enable."
-)
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.skipif(
+        not settings.run_integration,
+        reason="Integration tests disabled. Set RUN_INTEGRATION=true in .env to enable."
+    )
+]
 
 client = TestClient(app)
 
@@ -333,7 +336,8 @@ class TestConcurrentRequests:
                 "customer": "Concurrent Test",
                 "items": [{"item_code": "CONCURRENT-ITEM", "qty": 1.0}]
             }
-            return client.post("/otp/promise", json=request_data)
+            with TestClient(app) as local_client:
+                return local_client.post("/otp/promise", json=request_data)
         
         # Make 5 concurrent requests
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
