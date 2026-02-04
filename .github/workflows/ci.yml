@@ -37,10 +37,16 @@ jobs:
         continue-on-error: true
 
       - name: Run unit tests
+        env:
+          ERPNEXT_API_KEY: test-api-key
+          ERPNEXT_API_SECRET: test-api-secret
         run: |
           pytest tests/unit/ -v --cov=src --cov-report=xml --cov-report=term
 
       - name: Run API tests
+        env:
+          ERPNEXT_API_KEY: test-api-key
+          ERPNEXT_API_SECRET: test-api-secret
         run: |
           pytest tests/api/ -v --cov=src --cov-append --cov-report=xml --cov-report=term
 
