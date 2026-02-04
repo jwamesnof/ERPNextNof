@@ -19,7 +19,7 @@ class StockService:
     ) -> Dict[str, float]:
         """
         Get available stock for an item.
-        
+
         Returns:
             {
                 "actual_qty": 10.0,
@@ -34,8 +34,10 @@ class StockService:
                 actual_qty = bin_data.get("actual_qty", 0.0)
                 reserved_qty = bin_data.get("reserved_qty", 0.0)
                 available_qty = actual_qty - reserved_qty
-                logger.info(f"DEBUG: {item_code} in {warehouse} - actual={actual_qty}, reserved={reserved_qty}, available={available_qty}")
-                
+                logger.info(
+                    f"DEBUG: {item_code} in {warehouse} - actual={actual_qty}, reserved={reserved_qty}, available={available_qty}"
+                )
+
                 return {
                     "actual_qty": actual_qty,
                     "reserved_qty": reserved_qty,
@@ -60,7 +62,7 @@ class StockService:
     ) -> Dict[str, any]:
         """
         Get incoming supply from purchase orders.
-        
+
         Returns:
             {
                 "supply": [  # List of supply, may be empty if no POs exist
@@ -74,11 +76,8 @@ class StockService:
                 "access_error": None or str  # "permission_denied" or "other_error"
             }
         """
-        result = {
-            "supply": [],
-            "access_error": None
-        }
-        
+        result = {"supply": [], "access_error": None}
+
         try:
             pos = self.client.get_incoming_purchase_orders(item_code)
 
@@ -87,9 +86,7 @@ class StockService:
                 schedule_date_str = po.get("schedule_date")
                 if schedule_date_str:
                     if isinstance(schedule_date_str, str):
-                        expected_date = datetime.strptime(
-                            schedule_date_str, "%Y-%m-%d"
-                        ).date()
+                        expected_date = datetime.strptime(schedule_date_str, "%Y-%m-%d").date()
                     else:
                         expected_date = schedule_date_str
                 else:
@@ -115,7 +112,7 @@ class StockService:
 
         except ERPNextClientError as e:
             # Distinguish between permission error and other errors
-            status_code = getattr(e, 'status_code', None)
+            status_code = getattr(e, "status_code", None)
             if status_code == 403:
                 result["access_error"] = "permission_denied"
                 logger.warning(f"Permission denied accessing PO data for {item_code}: {e}")
@@ -123,4 +120,3 @@ class StockService:
                 result["access_error"] = "other_error"
                 logger.error(f"Failed to get incoming supply for {item_code}: {e}")
             return result
-

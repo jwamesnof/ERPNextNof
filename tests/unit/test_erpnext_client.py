@@ -15,23 +15,21 @@ class TestERPNextClientHTTPErrors:
         with patch("httpx.Client") as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
-            
+
             response = MagicMock()
             response.raise_for_status.side_effect = httpx.HTTPStatusError(
-                "404 Not Found",
-                request=MagicMock(),
-                response=response
+                "404 Not Found", request=MagicMock(), response=response
             )
             response.status_code = 404
             response.text = "Not Found"
-            
+
             mock_client.get.return_value = response
-            
+
             client = ERPNextClient(base_url="http://test.local", api_key="test", api_secret="test")
-            
+
             with pytest.raises(ERPNextClientError) as exc_info:
                 client.get_sales_order("SO-NONEXISTENT")
-            
+
             assert "404" in str(exc_info.value) or "404" in str(exc_info.value)
 
     def test_handles_403_permission_denied_error(self):
@@ -39,23 +37,21 @@ class TestERPNextClientHTTPErrors:
         with patch("httpx.Client") as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
-            
+
             response = MagicMock()
             response.raise_for_status.side_effect = httpx.HTTPStatusError(
-                "403 Forbidden",
-                request=MagicMock(),
-                response=response
+                "403 Forbidden", request=MagicMock(), response=response
             )
             response.status_code = 403
             response.text = "Permission Denied"
-            
+
             mock_client.get.return_value = response
-            
+
             client = ERPNextClient(base_url="http://test.local", api_key="test", api_secret="test")
-            
+
             with pytest.raises(ERPNextClientError) as exc_info:
                 client.get_incoming_purchase_orders("ITEM-001")
-            
+
             assert "403" in str(exc_info.value) or "error" in str(exc_info.value).lower()
 
     def test_handles_500_server_error(self):
@@ -63,20 +59,18 @@ class TestERPNextClientHTTPErrors:
         with patch("httpx.Client") as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
-            
+
             response = MagicMock()
             response.raise_for_status.side_effect = httpx.HTTPStatusError(
-                "500 Internal Server Error",
-                request=MagicMock(),
-                response=response
+                "500 Internal Server Error", request=MagicMock(), response=response
             )
             response.status_code = 500
             response.text = "Internal Server Error"
-            
+
             mock_client.get.return_value = response
-            
+
             client = ERPNextClient(base_url="http://test.local", api_key="test", api_secret="test")
-            
+
             with pytest.raises(ERPNextClientError):
                 client.get_stock_balance("ITEM-001")
 
@@ -85,20 +79,18 @@ class TestERPNextClientHTTPErrors:
         with patch("httpx.Client") as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
-            
+
             response = MagicMock()
             response.raise_for_status.side_effect = httpx.HTTPStatusError(
-                "502 Bad Gateway",
-                request=MagicMock(),
-                response=response
+                "502 Bad Gateway", request=MagicMock(), response=response
             )
             response.status_code = 502
             response.text = "Bad Gateway"
-            
+
             mock_client.post.return_value = response
-            
+
             client = ERPNextClient(base_url="http://test.local", api_key="test", api_secret="test")
-            
+
             with pytest.raises(ERPNextClientError):
                 client.add_comment_to_doc("Sales Order", "SO-001", "Test comment")
 
@@ -121,15 +113,15 @@ class TestERPNextClientMalformedResponses:
         with patch("httpx.Client") as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
-            
+
             response = MagicMock()
             response.raise_for_status.return_value = None
             response.json.side_effect = ValueError("Invalid JSON")
-            
+
             mock_client.get.return_value = response
-            
+
             client = ERPNextClient(base_url="http://test.local", api_key="test", api_secret="test")
-            
+
             with pytest.raises(ERPNextClientError):
                 client.get_sales_order("SO-001")
 
@@ -138,39 +130,39 @@ class TestERPNextClientMalformedResponses:
         with patch("httpx.Client") as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
-            
+
             response = MagicMock()
             response.raise_for_status.return_value = None
             response.json.return_value = {
                 "exception": "Invalid Item Code",
-                "exc_type": "ValidationError"
+                "exc_type": "ValidationError",
             }
-            
+
             mock_client.get.return_value = response
-            
+
             client = ERPNextClient(base_url="http://test.local", api_key="test", api_secret="test")
-            
+
             with pytest.raises(ERPNextClientError) as exc_info:
                 client.get_stock_balance("INVALID_ITEM")
-            
-            assert "Invalid Item Code" in str(exc_info.value) or "error" in str(exc_info.value).lower()
+
+            assert (
+                "Invalid Item Code" in str(exc_info.value) or "error" in str(exc_info.value).lower()
+            )
 
     def test_handles_erpnext_error_exc_type_field(self):
         """Test that ERPNext error responses with 'exc_type' field raise ERPNextClientError."""
         with patch("httpx.Client") as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
-            
+
             response = MagicMock()
             response.raise_for_status.return_value = None
-            response.json.return_value = {
-                "exc_type": "frappe.exceptions.PermissionError"
-            }
-            
+            response.json.return_value = {"exc_type": "frappe.exceptions.PermissionError"}
+
             mock_client.get.return_value = response
-            
+
             client = ERPNextClient(base_url="http://test.local", api_key="test", api_secret="test")
-            
+
             with pytest.raises(ERPNextClientError):
                 client.get_sales_order_list()
 
@@ -183,21 +175,16 @@ class TestERPNextClientSuccessfulResponses:
         with patch("httpx.Client") as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
-            
+
             response = MagicMock()
             response.raise_for_status.return_value = None
-            response.json.return_value = {
-                "data": {
-                    "name": "SO-00001",
-                    "customer": "Test Customer"
-                }
-            }
-            
+            response.json.return_value = {"data": {"name": "SO-00001", "customer": "Test Customer"}}
+
             mock_client.get.return_value = response
-            
+
             client = ERPNextClient(base_url="http://test.local", api_key="test", api_secret="test")
             result = client.get_sales_order("SO-00001")
-            
+
             assert result["name"] == "SO-00001"
             assert result["customer"] == "Test Customer"
 
@@ -206,19 +193,16 @@ class TestERPNextClientSuccessfulResponses:
         with patch("httpx.Client") as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
-            
+
             response = MagicMock()
             response.raise_for_status.return_value = None
-            response.json.return_value = {
-                "name": "SO-00001",
-                "customer": "Test Customer"
-            }
-            
+            response.json.return_value = {"name": "SO-00001", "customer": "Test Customer"}
+
             mock_client.get.return_value = response
-            
+
             client = ERPNextClient(base_url="http://test.local", api_key="test", api_secret="test")
             result = client.get_sales_order("SO-00001")
-            
+
             assert result["name"] == "SO-00001"
             assert result["customer"] == "Test Customer"
 
@@ -227,21 +211,21 @@ class TestERPNextClientSuccessfulResponses:
         with patch("httpx.Client") as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
-            
+
             response = MagicMock()
             response.raise_for_status.return_value = None
             response.json.return_value = {
                 "message": [
                     {"name": "SO-001", "customer": "Cust-A"},
-                    {"name": "SO-002", "customer": "Cust-B"}
+                    {"name": "SO-002", "customer": "Cust-B"},
                 ]
             }
-            
+
             mock_client.get.return_value = response
-            
+
             client = ERPNextClient(base_url="http://test.local", api_key="test", api_secret="test")
             result = client.get_sales_order_list()
-            
+
             assert isinstance(result, list)
             assert len(result) == 2
 
@@ -254,7 +238,7 @@ class TestERPNextClientBinDetails:
         with patch("httpx.Client") as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
-            
+
             response = MagicMock()
             response.raise_for_status.return_value = None
             response.json.return_value = {
@@ -263,16 +247,16 @@ class TestERPNextClientBinDetails:
                         "actual_qty": 100.0,
                         "reserved_qty": 10.0,
                         "projected_qty": 90.0,
-                        "warehouse": "WH-Main"
+                        "warehouse": "WH-Main",
                     }
                 ]
             }
-            
+
             mock_client.get.return_value = response
-            
+
             client = ERPNextClient(base_url="http://test.local", api_key="test", api_secret="test")
             result = client.get_bin_details("ITEM-001", "WH-Main")
-            
+
             assert result["actual_qty"] == 100.0
             assert result["reserved_qty"] == 10.0
 
@@ -281,16 +265,16 @@ class TestERPNextClientBinDetails:
         with patch("httpx.Client") as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
-            
+
             response = MagicMock()
             response.raise_for_status.return_value = None
             response.json.return_value = {"data": []}
-            
+
             mock_client.get.return_value = response
-            
+
             client = ERPNextClient(base_url="http://test.local", api_key="test", api_secret="test")
             result = client.get_bin_details("ITEM-001", "WH-NONEXISTENT")
-            
+
             assert result["actual_qty"] == 0.0
             assert result["reserved_qty"] == 0.0
             assert result["projected_qty"] == 0.0
@@ -302,7 +286,7 @@ class TestERPNextClientBinDetails:
         with patch("httpx.Client") as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
-            
+
             response = MagicMock()
             response.raise_for_status.return_value = None
             response.json.return_value = [
@@ -310,15 +294,15 @@ class TestERPNextClientBinDetails:
                     "actual_qty": 50.0,
                     "reserved_qty": 5.0,
                     "projected_qty": 45.0,
-                    "warehouse": "WH-Secondary"
+                    "warehouse": "WH-Secondary",
                 }
             ]
-            
+
             mock_client.get.return_value = response
-            
+
             client = ERPNextClient(base_url="http://test.local", api_key="test", api_secret="test")
             result = client.get_bin_details("ITEM-002", "WH-Secondary")
-            
+
             assert result["actual_qty"] == 50.0
             assert result["reserved_qty"] == 5.0
 
@@ -331,7 +315,7 @@ class TestERPNextClientPurchaseOrders:
         with patch("httpx.Client") as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
-            
+
             response = MagicMock()
             response.raise_for_status.return_value = None
             response.json.return_value = [
@@ -341,15 +325,15 @@ class TestERPNextClientPurchaseOrders:
                     "qty": 100,
                     "received_qty": 20,
                     "schedule_date": "2026-02-10",
-                    "warehouse": "WH-Main"
+                    "warehouse": "WH-Main",
                 }
             ]
-            
+
             mock_client.get.return_value = response
-            
+
             client = ERPNextClient(base_url="http://test.local", api_key="test", api_secret="test")
             result = client.get_incoming_purchase_orders("ITEM-001")
-            
+
             assert len(result) == 1
             assert result[0]["po_id"] == "PO-001"
             assert result[0]["item_code"] == "ITEM-001"
@@ -361,16 +345,16 @@ class TestERPNextClientPurchaseOrders:
         with patch("httpx.Client") as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
-            
+
             response = MagicMock()
             response.raise_for_status.return_value = None
             response.json.return_value = []
-            
+
             mock_client.get.return_value = response
-            
+
             client = ERPNextClient(base_url="http://test.local", api_key="test", api_secret="test")
             result = client.get_incoming_purchase_orders("ITEM-NEVER-ORDERED")
-            
+
             assert result == []
 
     def test_incoming_po_non_list_response_handled(self):
@@ -378,16 +362,16 @@ class TestERPNextClientPurchaseOrders:
         with patch("httpx.Client") as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
-            
+
             response = MagicMock()
             response.raise_for_status.return_value = None
             response.json.return_value = {"data": []}
-            
+
             mock_client.get.return_value = response
-            
+
             client = ERPNextClient(base_url="http://test.local", api_key="test", api_secret="test")
             result = client.get_incoming_purchase_orders("ITEM-001")
-            
+
             assert result == []
 
 
@@ -399,21 +383,21 @@ class TestERPNextClientSalesOrderList:
         with patch("httpx.Client") as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
-            
+
             response = MagicMock()
             response.raise_for_status.return_value = None
             response.json.return_value = {
                 "data": [
                     {"name": "SO-001", "customer": "Cust-A", "status": "Draft"},
-                    {"name": "SO-002", "customer": "Cust-B", "status": "To Deliver"}
+                    {"name": "SO-002", "customer": "Cust-B", "status": "To Deliver"},
                 ]
             }
-            
+
             mock_client.get.return_value = response
-            
+
             client = ERPNextClient(base_url="http://test.local", api_key="test", api_secret="test")
             result = client.get_sales_order_list(limit=20)
-            
+
             assert len(result) == 2
             assert result[0]["name"] == "SO-001"
 
@@ -422,18 +406,16 @@ class TestERPNextClientSalesOrderList:
         with patch("httpx.Client") as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
-            
+
             response = MagicMock()
             response.raise_for_status.return_value = None
-            response.json.return_value = [
-                {"name": "SO-003", "customer": "Cust-C"}
-            ]
-            
+            response.json.return_value = [{"name": "SO-003", "customer": "Cust-C"}]
+
             mock_client.get.return_value = response
-            
+
             client = ERPNextClient(base_url="http://test.local", api_key="test", api_secret="test")
             result = client.get_sales_order_list()
-            
+
             assert len(result) == 1
             assert result[0]["name"] == "SO-003"
 
@@ -442,16 +424,16 @@ class TestERPNextClientSalesOrderList:
         with patch("httpx.Client") as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
-            
+
             response = MagicMock()
             response.raise_for_status.return_value = None
             response.json.return_value = {"some_field": "value"}
-            
+
             mock_client.get.return_value = response
-            
+
             client = ERPNextClient(base_url="http://test.local", api_key="test", api_secret="test")
             result = client.get_sales_order_list()
-            
+
             assert result == []
 
 
@@ -463,16 +445,16 @@ class TestERPNextClientHealthCheck:
         with patch("httpx.Client") as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
-            
+
             response = MagicMock()
             response.raise_for_status.return_value = None
             response.json.return_value = {"message": "admin"}
-            
+
             mock_client.get.return_value = response
-            
+
             client = ERPNextClient(base_url="http://test.local", api_key="test", api_secret="test")
             result = client.health_check()
-            
+
             assert result is True
 
     def test_health_check_failure_on_error(self):
@@ -481,10 +463,10 @@ class TestERPNextClientHealthCheck:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
             mock_client.get.side_effect = Exception("Connection failed")
-            
+
             client = ERPNextClient(base_url="http://test.local", api_key="test", api_secret="test")
             result = client.health_check()
-            
+
             assert result is False
 
 
@@ -496,10 +478,12 @@ class TestERPNextClientContextManager:
         with patch("httpx.Client") as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
-            
-            with ERPNextClient(base_url="http://test.local", api_key="test", api_secret="test") as client:
+
+            with ERPNextClient(
+                base_url="http://test.local", api_key="test", api_secret="test"
+            ) as client:
                 assert client is not None
-            
+
             mock_client.close.assert_called_once()
 
     def test_close_method(self):
@@ -507,8 +491,8 @@ class TestERPNextClientContextManager:
         with patch("httpx.Client") as mock_client_class:
             mock_client = MagicMock()
             mock_client_class.return_value = mock_client
-            
+
             client = ERPNextClient(base_url="http://test.local", api_key="test", api_secret="test")
             client.close()
-            
+
             mock_client.close.assert_called_once()

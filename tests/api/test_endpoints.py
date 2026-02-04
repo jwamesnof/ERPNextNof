@@ -17,22 +17,28 @@ class TestPromiseEndpointErrorHandling:
 
     def test_promise_validation_error_returns_422(self):
         """Test that validation errors return 422 Unprocessable Entity."""
-        response = client.post("/otp/promise", json={
-            "customer": "Test Customer",
-            "items": []  # Empty items list should fail validation
-        })
-        
+        response = client.post(
+            "/otp/promise",
+            json={
+                "customer": "Test Customer",
+                "items": [],  # Empty items list should fail validation
+            },
+        )
+
         assert response.status_code == 422
         data = response.json()
         assert "detail" in data
 
     def test_promise_missing_required_field_returns_422(self):
         """Test that missing required fields return 422."""
-        response = client.post("/otp/promise", json={
-            "items": [{"item_code": "ITEM-001", "qty": 10, "warehouse": "WH-Main"}]
-            # Missing 'customer' field
-        })
-        
+        response = client.post(
+            "/otp/promise",
+            json={
+                "items": [{"item_code": "ITEM-001", "qty": 10, "warehouse": "WH-Main"}]
+                # Missing 'customer' field
+            },
+        )
+
         assert response.status_code == 422
 
 
@@ -41,11 +47,14 @@ class TestApplyEndpointErrorHandling:
 
     def test_apply_validation_error_returns_422(self):
         """Test that validation errors return 422."""
-        response = client.post("/otp/apply", json={
-            "sales_order_id": "SO-001"
-            # Missing required fields
-        })
-        
+        response = client.post(
+            "/otp/apply",
+            json={
+                "sales_order_id": "SO-001"
+                # Missing required fields
+            },
+        )
+
         assert response.status_code == 422
 
 
@@ -55,7 +64,7 @@ class TestProcurementSuggestEndpoint:
     def test_procurement_suggest_validation(self):
         """Test validation on procurement suggest endpoint."""
         response = client.post("/otp/procurement-suggest", json={})
-        
+
         assert response.status_code == 422
 
 
@@ -75,7 +84,7 @@ class TestSalesOrdersEndpointEmptyResults:
         """Test basic endpoint format."""
         # Empty list testing requires real ERPNext integration
         # Just verify endpoint exists
-        assert "/otp/sales-orders" in [route.path for route in app.routes if hasattr(route, 'path')]
+        assert "/otp/sales-orders" in [route.path for route in app.routes if hasattr(route, "path")]
 
 
 class TestSalesOrderDetailsEndpointStockDataHandling:
@@ -90,19 +99,13 @@ class TestSalesOrderDetailsEndpointStockDataHandling:
                 "name": "SO-001",
                 "customer_name": "Test Customer",
                 "transaction_date": "2026-02-01",
-                "items": [
-                    {
-                        "item_code": "ITEM-001",
-                        "qty": 10,
-                        "warehouse": "WH-Main"
-                    }
-                ]
+                "items": [{"item_code": "ITEM-001", "qty": 10, "warehouse": "WH-Main"}],
             }
             # Stock fetch fails
             mock_instance.get_bin_details.side_effect = Exception("Stock unavailable")
-            
+
             response = client.get("/otp/sales-orders/SO-001")
-            
+
             assert response.status_code == 200
             data = response.json()
             # Should return zeros for stock metrics
@@ -119,17 +122,11 @@ class TestSalesOrderDetailsEndpointStockDataHandling:
                 "name": "SO-002",
                 "customer_name": "Test Customer 2",
                 "transaction_date": "2026-02-01",
-                "items": [
-                    {
-                        "item_code": "ITEM-002",
-                        "qty": 5,
-                        "warehouse": None  # No warehouse
-                    }
-                ]
+                "items": [{"item_code": "ITEM-002", "qty": 5, "warehouse": None}],  # No warehouse
             }
-            
+
             response = client.get("/otp/sales-orders/SO-002")
-            
+
             assert response.status_code == 200
             data = response.json()
             # Should not call get_bin_details
@@ -151,11 +148,11 @@ class TestSalesOrderDetailsEndpointDefaultsHandling:
                 "customer_name": "Test Customer 3",
                 "transaction_date": "2026-02-01",
                 "set_warehouse": "Global-WH",
-                "items": []
+                "items": [],
             }
-            
+
             response = client.get("/otp/sales-orders/SO-003")
-            
+
             assert response.status_code == 200
             data = response.json()
             assert data["defaults"]["warehouse"] == "Global-WH"
@@ -170,18 +167,12 @@ class TestSalesOrderDetailsEndpointDefaultsHandling:
                 "customer_name": "Test Customer 4",
                 "transaction_date": "2026-02-01",
                 "set_warehouse": None,
-                "items": [
-                    {
-                        "item_code": "ITEM-003",
-                        "qty": 10,
-                        "warehouse": "Item-WH"
-                    }
-                ]
+                "items": [{"item_code": "ITEM-003", "qty": 10, "warehouse": "Item-WH"}],
             }
             mock_instance.get_bin_details.return_value = {}
-            
+
             response = client.get("/otp/sales-orders/SO-004")
-            
+
             assert response.status_code == 200
             data = response.json()
             assert data["defaults"]["warehouse"] == "Item-WH"
@@ -194,9 +185,9 @@ class TestHealthEndpointMockSupply:
         """Test health check when mock supply is enabled."""
         with patch("src.routes.otp.settings") as mock_settings:
             mock_settings.use_mock_supply = True
-            
+
             response = client.get("/otp/health")
-            
+
             assert response.status_code == 200
             data = response.json()
             assert data["status"] == "healthy"
@@ -209,9 +200,9 @@ class TestHealthEndpointMockSupply:
             mock_instance = MagicMock()
             mock_client_class.return_value = mock_instance
             mock_instance.get_stock_balance.side_effect = Exception("Connection error")
-            
+
             response = client.get("/otp/health")
-            
+
             assert response.status_code == 200
             data = response.json()
             assert data["status"] == "healthy"
@@ -227,9 +218,9 @@ class TestERPNextErrorMapping:
             mock_instance = MagicMock()
             mock_client_class.return_value = mock_instance
             mock_instance.get_sales_order.side_effect = ERPNextClientError("HTTP 404: Not Found")
-            
+
             response = client.get("/otp/sales-orders/SO-NONEXISTENT")
-            
+
             assert response.status_code == 404
             data = response.json()
             assert "not found" in data["detail"].lower()
@@ -240,9 +231,9 @@ class TestERPNextErrorMapping:
             mock_instance = MagicMock()
             mock_client_class.return_value = mock_instance
             mock_instance.get_sales_order.side_effect = ERPNextClientError("HTTP 500: Server Error")
-            
+
             response = client.get("/otp/sales-orders/SO-001")
-            
+
             assert response.status_code == 502
             data = response.json()
             assert "ERPNext returned error" in data["detail"]
@@ -257,7 +248,7 @@ class TestSalesOrderListFilters:
             mock_instance = MagicMock()
             mock_client_class.return_value = mock_instance
             mock_instance.get_sales_order_list.return_value = []
-            
+
             response = client.get(
                 "/otp/sales-orders"
                 "?limit=50"
@@ -268,9 +259,9 @@ class TestSalesOrderListFilters:
                 "&to_date=2026-02-28"
                 "&search=SO-001"
             )
-            
+
             assert response.status_code == 200
-            
+
             # Verify all filters were passed
             call_args = mock_instance.get_sales_order_list.call_args
             assert call_args[1]["limit"] == 50
@@ -287,9 +278,9 @@ class TestSalesOrderListFilters:
             mock_instance = MagicMock()
             mock_client_class.return_value = mock_instance
             mock_instance.get_sales_order_list.return_value = []
-            
+
             response = client.get("/otp/sales-orders?limit=1000")
-            
+
             assert response.status_code == 422  # Should fail validation at FastAPI level
             # OR if it passes through:
             # call_args = mock_instance.get_sales_order_list.call_args
@@ -301,7 +292,7 @@ class TestPromiseEndpointSuccessPath:
 
     def test_promise_endpoint_exists(self):
         """Test that promise endpoint is registered."""
-        assert "/otp/promise" in [route.path for route in app.routes if hasattr(route, 'path')]
+        assert "/otp/promise" in [route.path for route in app.routes if hasattr(route, "path")]
 
 
 class TestOTPEndpointExceptionHandlers:
@@ -314,13 +305,16 @@ class TestOTPEndpointExceptionHandlers:
             mock_controller = MagicMock()
             mock_controller_class.return_value = mock_controller
             mock_controller.calculate_promise.side_effect = ERPNextClientError("Connection failed")
-            
+
             with patch("src.routes.otp.get_controller", return_value=mock_controller):
-                response = client.post("/otp/promise", json={
-                    "customer": "CUST-001",
-                    "items": [{"item_code": "ITEM-001", "qty": 10, "warehouse": "Stores"}]
-                })
-                
+                response = client.post(
+                    "/otp/promise",
+                    json={
+                        "customer": "CUST-001",
+                        "items": [{"item_code": "ITEM-001", "qty": 10, "warehouse": "Stores"}],
+                    },
+                )
+
                 assert response.status_code == 503
                 assert "ERPNext service error" in response.json()["detail"]
 
@@ -331,13 +325,16 @@ class TestOTPEndpointExceptionHandlers:
             mock_controller = MagicMock()
             mock_controller_class.return_value = mock_controller
             mock_controller.calculate_promise.side_effect = ValueError("Invalid data")
-            
+
             with patch("src.routes.otp.get_controller", return_value=mock_controller):
-                response = client.post("/otp/promise", json={
-                    "customer": "CUST-001",
-                    "items": [{"item_code": "ITEM-001", "qty": 10, "warehouse": "Stores"}]
-                })
-                
+                response = client.post(
+                    "/otp/promise",
+                    json={
+                        "customer": "CUST-001",
+                        "items": [{"item_code": "ITEM-001", "qty": 10, "warehouse": "Stores"}],
+                    },
+                )
+
                 assert response.status_code == 500
                 assert "Internal error" in response.json()["detail"]
 
@@ -348,14 +345,17 @@ class TestOTPEndpointExceptionHandlers:
             mock_controller = MagicMock()
             mock_controller_class.return_value = mock_controller
             mock_controller.apply_promise.side_effect = ERPNextClientError("Failed to update SO")
-            
+
             with patch("src.routes.otp.get_controller", return_value=mock_controller):
-                response = client.post("/otp/apply", json={
-                    "sales_order_id": "SO-001",
-                    "promise_date": "2026-02-10",
-                    "confidence": "HIGH"
-                })
-                
+                response = client.post(
+                    "/otp/apply",
+                    json={
+                        "sales_order_id": "SO-001",
+                        "promise_date": "2026-02-10",
+                        "confidence": "HIGH",
+                    },
+                )
+
                 assert response.status_code == 503
                 assert "ERPNext service error" in response.json()["detail"]
 
@@ -366,14 +366,17 @@ class TestOTPEndpointExceptionHandlers:
             mock_controller = MagicMock()
             mock_controller_class.return_value = mock_controller
             mock_controller.apply_promise.side_effect = RuntimeError("Unexpected error")
-            
+
             with patch("src.routes.otp.get_controller", return_value=mock_controller):
-                response = client.post("/otp/apply", json={
-                    "sales_order_id": "SO-001",
-                    "promise_date": "2026-02-10",
-                    "confidence": "HIGH"
-                })
-                
+                response = client.post(
+                    "/otp/apply",
+                    json={
+                        "sales_order_id": "SO-001",
+                        "promise_date": "2026-02-10",
+                        "confidence": "HIGH",
+                    },
+                )
+
                 assert response.status_code == 500
                 assert "Internal error" in response.json()["detail"]
 
@@ -384,9 +387,9 @@ class TestOTPEndpointExceptionHandlers:
             mock_instance = MagicMock()
             mock_client_class.return_value = mock_instance
             mock_instance.get_sales_order_list.side_effect = RuntimeError("Database error")
-            
+
             response = client.get("/otp/sales-orders")
-            
+
             assert response.status_code == 500
             assert "Internal server error" in response.json()["detail"]
 
@@ -397,9 +400,9 @@ class TestOTPEndpointExceptionHandlers:
             mock_instance = MagicMock()
             mock_client_class.return_value = mock_instance
             mock_instance.get_sales_order.side_effect = TypeError("Invalid data format")
-            
+
             response = client.get("/otp/sales-orders/SO-001")
-            
+
             assert response.status_code == 500
             assert "Internal server error" in response.json()["detail"]
 
@@ -408,9 +411,9 @@ class TestOTPEndpointExceptionHandlers:
         """Test health check exception handling."""
         with patch("src.routes.otp.ERPNextClient") as mock_client_class:
             mock_client_class.side_effect = Exception("Connection refused")
-            
+
             response = client.get("/otp/health")
-            
+
             assert response.status_code == 200
             assert response.json()["status"] == "healthy"
             assert response.json()["erpnext_connected"] is False
@@ -425,7 +428,7 @@ class TestOTPEndpointExceptionHandlers:
         with patch("src.routes.otp.settings") as mock_settings:
             mock_settings.use_mock_supply = True
             mock_settings.mock_data_file = "test.csv"
-            
+
             # Just verify the endpoint works with mock supply configured
             # The actual MockSupplyService usage is tested in integration tests
             assert mock_settings.use_mock_supply is True
@@ -435,32 +438,34 @@ class TestOTPEndpointExceptionHandlers:
         """Test sales orders cache returns cached data."""
         import time
         from src.routes import otp
-        
+
         # Set up cache with future expiry and valid SalesOrderItem structure
         cache_key = (20, 0, None, None, None, None, None)
         otp._sales_orders_cache[cache_key] = {
             "expires_at": time.time() + 300,
-            "data": [{
-                "name": "SO-CACHED",
-                "customer": "Test Customer",
-                "transaction_date": "2026-02-01",
-                "delivery_date": "2026-02-05",
-                "status": "Draft",
-                "grand_total": 1000.0
-            }]
+            "data": [
+                {
+                    "name": "SO-CACHED",
+                    "customer": "Test Customer",
+                    "transaction_date": "2026-02-01",
+                    "delivery_date": "2026-02-05",
+                    "status": "Draft",
+                    "grand_total": 1000.0,
+                }
+            ],
         }
-        
+
         with patch("src.routes.otp.ERPNextClient") as mock_client_class:
             mock_instance = MagicMock()
             mock_client_class.return_value = mock_instance
             mock_instance.get_sales_order_list.return_value = [{"name": "SO-NEW"}]
-            
+
             response = client.get("/otp/sales-orders")
-            
+
             assert response.status_code == 200
             data = response.json()
             # Should return cached data, not call ERPNext
             assert data[0]["name"] == "SO-CACHED"
-            
+
         # Clean up cache
         otp._sales_orders_cache.clear()

@@ -29,9 +29,7 @@ class TestPromiseService:
         item = ItemRequest(item_code="ITEM-001", qty=10.0, warehouse="Stores - WH")
         rules = PromiseRules(lead_time_buffer_days=1, no_weekends=False)
 
-        response = promise_service.calculate_promise(
-            customer="CUST-001", items=[item], rules=rules
-        )
+        response = promise_service.calculate_promise(customer="CUST-001", items=[item], rules=rules)
 
         # Assertions
         assert response.confidence == "HIGH"
@@ -70,14 +68,14 @@ class TestPromiseService:
         item = ItemRequest(item_code="ITEM-001", qty=10.0, warehouse="Stores - WH")
         rules = PromiseRules(lead_time_buffer_days=1, no_weekends=False)
 
-        response = promise_service.calculate_promise(
-            customer="CUST-001", items=[item], rules=rules
-        )
+        response = promise_service.calculate_promise(customer="CUST-001", items=[item], rules=rules)
 
         # Assertions
         assert response.confidence == "MEDIUM"
         # promise_date = stock_available(0) + processing_lead_time(1) + partial_PO_available(3) + processing_lead_time(1) + buffer(1) = 6
-        assert response.promise_date == today + timedelta(days=5)  # PO in 3 days + processing lead time(1) + buffer(1)
+        assert response.promise_date == today + timedelta(
+            days=5
+        )  # PO in 3 days + processing lead time(1) + buffer(1)
         assert len(response.plan[0].fulfillment) == 2
         assert response.plan[0].fulfillment[0].source == "stock"
         assert response.plan[0].fulfillment[1].source == "purchase_order"
@@ -109,14 +107,14 @@ class TestPromiseService:
         item = ItemRequest(item_code="ITEM-001", qty=10.0, warehouse="Stores - WH")
         rules = PromiseRules(lead_time_buffer_days=1, no_weekends=False)
 
-        response = promise_service.calculate_promise(
-            customer="CUST-001", items=[item], rules=rules
-        )
+        response = promise_service.calculate_promise(customer="CUST-001", items=[item], rules=rules)
 
         # Assertions
         assert response.confidence == "MEDIUM"
         # promise_date = PO_available(5 days) + processing_lead_time(1) + buffer(1) = 7 days
-        assert response.promise_date == today + timedelta(days=7)  # 5 days PO + 1 processing + 1 buffer
+        assert response.promise_date == today + timedelta(
+            days=7
+        )  # 5 days PO + 1 processing + 1 buffer
         assert response.plan[0].fulfillment[0].source == "purchase_order"
 
     def test_promise_shortage(self, mock_erpnext_client, today):
@@ -145,9 +143,7 @@ class TestPromiseService:
         item = ItemRequest(item_code="ITEM-001", qty=10.0, warehouse="Stores - WH")
         rules = PromiseRules(lead_time_buffer_days=1, no_weekends=False)
 
-        response = promise_service.calculate_promise(
-            customer="CUST-001", items=[item], rules=rules
-        )
+        response = promise_service.calculate_promise(customer="CUST-001", items=[item], rules=rules)
 
         # Assertions
         assert response.confidence == "LOW"
@@ -159,7 +155,7 @@ class TestPromiseService:
         """Test: Promise date adjusted to skip weekends."""
         # Setup: Promise falls on Saturday (2026-01-31 is Saturday)
         saturday = date(2026, 1, 31)
-        
+
         mock_erpnext_client.get_bin_details.return_value = {
             "actual_qty": 10.0,
             "reserved_qty": 0.0,
@@ -172,22 +168,18 @@ class TestPromiseService:
 
         # Force base calculation to land on Saturday
         item = ItemRequest(item_code="ITEM-001", qty=10.0, warehouse="Stores - WH")
-        rules = PromiseRules(
-            lead_time_buffer_days=0,  # No buffer
-            no_weekends=True
-        )
+        rules = PromiseRules(lead_time_buffer_days=0, no_weekends=True)  # No buffer
 
         # Mock _get_today to return Friday (so Saturday after buffer would be tested)
         # This is a simplified test - in reality would need more complex date mocking
-        response = promise_service.calculate_promise(
-            customer="CUST-001", items=[item], rules=rules
-        )
+        response = promise_service.calculate_promise(customer="CUST-001", items=[item], rules=rules)
 
         # Weekend should be skipped
         assert response.promise_date.weekday() < 5  # Not Saturday(5) or Sunday(6)
 
     def test_multi_item_promise(self, mock_erpnext_client, today):
         """Test: Multiple items, promise is max of all item dates."""
+
         # Setup: Item A available today, Item B arrives in 5 days
         def get_bin_side_effect(item_code, warehouse):
             if item_code == "ITEM-A":
@@ -222,14 +214,14 @@ class TestPromiseService:
         ]
         rules = PromiseRules(lead_time_buffer_days=1, no_weekends=False)
 
-        response = promise_service.calculate_promise(
-            customer="CUST-001", items=items, rules=rules
-        )
+        response = promise_service.calculate_promise(customer="CUST-001", items=items, rules=rules)
 
         # Promise should be based on Item B (latest)
         # Item A: today + processing_lead_time(1) + buffer(1) = +2 days
         # Item B: 5 days + processing_lead_time(1) + buffer(1) = +7 days
-        assert response.promise_date == today + timedelta(days=7)  # Item B is latest: 5 + 1 processing + 1 buffer
+        assert response.promise_date == today + timedelta(
+            days=7
+        )  # Item B is latest: 5 + 1 processing + 1 buffer
         assert len(response.plan) == 2
 
     def test_po_access_permission_denied(self, mock_erpnext_client, today):
@@ -242,27 +234,31 @@ class TestPromiseService:
         }
         # Simulate permission denied error
         mock_erpnext_client.get_incoming_purchase_orders.return_value = []
-        
+
         stock_service = StockService(mock_erpnext_client)
         # Mock get_incoming_supply to return access_error
         from unittest.mock import patch
-        with patch.object(stock_service, 'get_incoming_supply', return_value={
-            "supply": [],
-            "access_error": "permission_denied"
-        }):
+
+        with patch.object(
+            stock_service,
+            "get_incoming_supply",
+            return_value={"supply": [], "access_error": "permission_denied"},
+        ):
             promise_service = PromiseService(stock_service)
-            
+
             item = ItemRequest(item_code="ITEM-001", qty=10.0, warehouse="Stores - WH")
             rules = PromiseRules(lead_time_buffer_days=1, no_weekends=False)
-            
+
             response = promise_service.calculate_promise(
                 customer="CUST-001", items=[item], rules=rules
             )
-            
+
             # Should have shortage and mention PO access issue
             assert response.plan[0].shortage == 10.0
-            assert any("PO data unavailable" in reason or "permissions" in reason.lower() 
-                      for reason in response.reasons)
+            assert any(
+                "PO data unavailable" in reason or "permissions" in reason.lower()
+                for reason in response.reasons
+            )
 
     def test_no_weekends_false(self, mock_erpnext_client, today):
         """Test: no_weekends=False allows weekend delivery dates."""
@@ -272,17 +268,15 @@ class TestPromiseService:
             "projected_qty": 10.0,
         }
         mock_erpnext_client.get_incoming_purchase_orders.return_value = []
-        
+
         stock_service = StockService(mock_erpnext_client)
         promise_service = PromiseService(stock_service)
-        
+
         item = ItemRequest(item_code="ITEM-001", qty=10.0, warehouse="Stores - WH")
         rules = PromiseRules(lead_time_buffer_days=1, no_weekends=False)  # Allow weekends
-        
-        response = promise_service.calculate_promise(
-            customer="CUST-001", items=[item], rules=rules
-        )
-        
+
+        response = promise_service.calculate_promise(customer="CUST-001", items=[item], rules=rules)
+
         # Promise date should be simple addition without weekend skipping
         # today + processing_lead_time(1) + buffer(1) = +2 days (regardless of weekday)
         assert response.promise_date == today + timedelta(days=2)
@@ -295,20 +289,20 @@ class TestPromiseService:
             "projected_qty": 10.0,
         }
         mock_erpnext_client.get_incoming_purchase_orders.return_value = []
-        
+
         stock_service = StockService(mock_erpnext_client)
         promise_service = PromiseService(stock_service)
-        
+
         item = ItemRequest(item_code="ITEM-001", qty=10.0, warehouse="Stores - WH")
         rules = PromiseRules(lead_time_buffer_days=1, no_weekends=False)
-        
+
         response = promise_service.calculate_promise(
-            customer="CUST-001", 
-            items=[item], 
+            customer="CUST-001",
+            items=[item],
             desired_date=today + timedelta(days=10),  # Desired date is 10 days out
-            rules=rules
+            rules=rules,
         )
-        
+
         # Should be on time since desired date is far enough
         # Promise would be ~2 days, desired is 10, so on_time
         assert response.confidence in ["HIGH", "MEDIUM"]
@@ -334,20 +328,20 @@ class TestPromiseService:
                 "warehouse": "Stores - WH",
             }
         ]
-        
+
         stock_service = StockService(mock_erpnext_client)
         promise_service = PromiseService(stock_service)
-        
+
         item = ItemRequest(item_code="ITEM-001", qty=10.0, warehouse="Stores - WH")
         rules = PromiseRules(lead_time_buffer_days=1, no_weekends=False)
-        
+
         response = promise_service.calculate_promise(
-            customer="CUST-001", 
-            items=[item], 
+            customer="CUST-001",
+            items=[item],
             desired_date=today + timedelta(days=5),  # Want it in 5 days, but PO is 15 days out
-            rules=rules
+            rules=rules,
         )
-        
+
         # Should suggest expediting the PO
         assert len(response.options) > 0
         assert any(opt.type == "expedite_po" for opt in response.options)
@@ -360,26 +354,26 @@ class TestPromiseService:
             "projected_qty": 10.0,
         }
         mock_erpnext_client.get_incoming_purchase_orders.return_value = []
-        
+
         stock_service = StockService(mock_erpnext_client)
         promise_service = PromiseService(stock_service)
-        
+
         item = ItemRequest(item_code="ITEM-001", qty=10.0, warehouse="Stores - WH")
-        
+
         # Set desired date far in future with NO_EARLY_DELIVERY mode
         rules = PromiseRules(
             lead_time_buffer_days=0,
             no_weekends=False,
-            desired_date_mode="NO_EARLY_DELIVERY"  # Promise should be adjusted to desired date
+            desired_date_mode="NO_EARLY_DELIVERY",  # Promise should be adjusted to desired date
         )
-        
+
         response = promise_service.calculate_promise(
-            customer="CUST-001", 
-            items=[item], 
+            customer="CUST-001",
+            items=[item],
             desired_date=today + timedelta(days=10),  # desired_date is separate parameter
-            rules=rules
+            rules=rules,
         )
-        
+
         # Promise should be adjusted to desired date
         assert response.promise_date == today + timedelta(days=10)
         assert response.adjusted_due_to_no_early_delivery == True
@@ -392,22 +386,26 @@ class TestPromiseService:
             "projected_qty": 10.0,
         }
         mock_erpnext_client.get_incoming_purchase_orders.return_value = []
-        
+
         stock_service = StockService(mock_erpnext_client)
         promise_service = PromiseService(stock_service)
-        
+
         # Use a warehouse that gets classified as NEEDS_PROCESSING
         from unittest.mock import patch
         from src.utils.warehouse_utils import WarehouseType
-        
-        with patch.object(promise_service.warehouse_manager, 'classify_warehouse', return_value=WarehouseType.NEEDS_PROCESSING):
+
+        with patch.object(
+            promise_service.warehouse_manager,
+            "classify_warehouse",
+            return_value=WarehouseType.NEEDS_PROCESSING,
+        ):
             item = ItemRequest(item_code="ITEM-001", qty=10.0, warehouse="Raw Materials - WH")
             rules = PromiseRules(lead_time_buffer_days=0, no_weekends=False)
-            
+
             response = promise_service.calculate_promise(
                 customer="CUST-001", items=[item], rules=rules
             )
-            
+
             # Should add extra processing day
             # Stock available + processing_lead_time(1) + extra_processing(1) = +2 days
             assert response.plan[0].fulfillment[0].ship_ready_date >= today + timedelta(days=2)
@@ -421,21 +419,25 @@ class TestPromiseService:
             "projected_qty": 10.0,
         }
         mock_erpnext_client.get_incoming_purchase_orders.return_value = []
-        
+
         stock_service = StockService(mock_erpnext_client)
         promise_service = PromiseService(stock_service)
-        
+
         from unittest.mock import patch
         from src.utils.warehouse_utils import WarehouseType
-        
-        with patch.object(promise_service.warehouse_manager, 'classify_warehouse', return_value=WarehouseType.IN_TRANSIT):
+
+        with patch.object(
+            promise_service.warehouse_manager,
+            "classify_warehouse",
+            return_value=WarehouseType.IN_TRANSIT,
+        ):
             item = ItemRequest(item_code="ITEM-001", qty=10.0, warehouse="Transit - WH")
             rules = PromiseRules(lead_time_buffer_days=0, no_weekends=False)
-            
+
             response = promise_service.calculate_promise(
                 customer="CUST-001", items=[item], rules=rules
             )
-            
+
             # Should have shortage because IN_TRANSIT stock is not counted
             assert response.plan[0].shortage == 10.0
             # IN_TRANSIT stock is ignored, so we should have shortage
@@ -445,12 +447,13 @@ class TestPromiseService:
         """Test: PO expected date falls on weekend → adjusted to next working day."""
         # Create a date that's Saturday in the future
         from datetime import timedelta
+
         # Find next Saturday
         days_ahead = (5 - today.weekday()) % 7  # 5 = Saturday
         if days_ahead == 0:
             days_ahead = 7
         next_saturday = today + timedelta(days=days_ahead)
-        
+
         mock_erpnext_client.get_bin_details.return_value = {
             "actual_qty": 0.0,
             "reserved_qty": 0.0,
@@ -468,23 +471,22 @@ class TestPromiseService:
                 "warehouse": "Stores - WH",
             }
         ]
-        
+
         stock_service = StockService(mock_erpnext_client)
         promise_service = PromiseService(stock_service)
-        
+
         item = ItemRequest(item_code="ITEM-001", qty=10.0, warehouse="Stores - WH")
         rules = PromiseRules(lead_time_buffer_days=0, no_weekends=True)
-        
-        response = promise_service.calculate_promise(
-            customer="CUST-001", items=[item], rules=rules
-        )
-        
+
+        response = promise_service.calculate_promise(customer="CUST-001", items=[item], rules=rules)
+
         # Should have fulfillment and promise date should skip weekend
         assert len(response.plan[0].fulfillment) > 0
         assert response.promise_date.weekday() < 5  # Not Fri/Sat
 
     def test_split_shipment_option(self, mock_erpnext_client, today):
         """Test: When some items available and desired date missed → suggest split shipment."""
+
         def get_bin_side_effect(item_code, warehouse):
             if item_code == "ITEM-A":
                 return {"actual_qty": 10.0, "reserved_qty": 0.0, "projected_qty": 10.0}
@@ -519,10 +521,10 @@ class TestPromiseService:
         rules = PromiseRules(lead_time_buffer_days=0, no_weekends=False)
 
         response = promise_service.calculate_promise(
-            customer="CUST-001", 
-            items=items, 
+            customer="CUST-001",
+            items=items,
             desired_date=today + timedelta(days=3),  # Want in 3 days, but B takes 20+
-            rules=rules
+            rules=rules,
         )
 
         # Should suggest expediting late PO or alternate warehouse
@@ -541,19 +543,17 @@ class TestPromiseServiceEdgeCases:
             "projected_qty": 10.0,
         }
         mock_erpnext_client.get_incoming_purchase_orders.return_value = []
-        
+
         stock_service = StockService(mock_erpnext_client)
         promise_service = PromiseService(stock_service)
-        
+
         item = ItemRequest(item_code="ITEM-001", qty=10.0, warehouse="Stores - WH")
-        
+
         # Pass None for rules - should use default
         response = promise_service.calculate_promise(
-            customer="CUST-001", 
-            items=[item], 
-            rules=None  # Test None handling
+            customer="CUST-001", items=[item], rules=None  # Test None handling
         )
-        
+
         assert response.promise_date is not None
         assert response.confidence in ["HIGH", "MEDIUM", "LOW"]
 
@@ -566,20 +566,20 @@ class TestPromiseServiceEdgeCases:
             "projected_qty": 10.0,
         }
         mock_erpnext_client.get_incoming_purchase_orders.return_value = []
-        
+
         stock_service = StockService(mock_erpnext_client)
         promise_service = PromiseService(stock_service)
-        
+
         item = ItemRequest(item_code="ITEM-001", qty=10.0, warehouse="Stores - WH")
         rules = PromiseRules(lead_time_buffer_days=0, no_weekends=False)
-        
+
         # Set desired date that's achievable
         response = promise_service.calculate_promise(
-            customer="CUST-001", 
+            customer="CUST-001",
             items=[item],
             desired_date=today + timedelta(days=10),  # Far in future
-            rules=rules
+            rules=rules,
         )
-        
+
         # Should be on time
         assert response.promise_date <= today + timedelta(days=10)

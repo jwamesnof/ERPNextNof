@@ -16,9 +16,14 @@ logger = logging.getLogger(__name__)
 
 class WarehouseType(str, Enum):
     """Warehouse availability classification."""
+
     SELLABLE = "SELLABLE"  # Stock counts as available now (e.g., "Stores - SD")
-    NEEDS_PROCESSING = "NEEDS_PROCESSING"  # Requires processing lead time (e.g., "Finished Goods - SD")
-    IN_TRANSIT = "IN_TRANSIT"  # Not available now; future supply only (e.g., "Goods In Transit - SD")
+    NEEDS_PROCESSING = (
+        "NEEDS_PROCESSING"  # Requires processing lead time (e.g., "Finished Goods - SD")
+    )
+    IN_TRANSIT = (
+        "IN_TRANSIT"  # Not available now; future supply only (e.g., "Goods In Transit - SD")
+    )
     NOT_AVAILABLE = "NOT_AVAILABLE"  # Cannot satisfy demand (e.g., "Work In Progress - SD")
     GROUP = "GROUP"  # Logical container only (e.g., "All Warehouses - SD")
 
@@ -30,18 +35,15 @@ DEFAULT_WAREHOUSE_CLASSIFICATIONS: Dict[str, WarehouseType] = {
     "stores - wh": WarehouseType.SELLABLE,
     "main warehouse": WarehouseType.SELLABLE,
     "warehouse": WarehouseType.SELLABLE,
-    
     # NEEDS_PROCESSING - requires additional processing
     "finished goods - sd": WarehouseType.NEEDS_PROCESSING,
     "finished goods - wh": WarehouseType.NEEDS_PROCESSING,
     "finished goods": WarehouseType.NEEDS_PROCESSING,
-    
     # IN_TRANSIT - not available now, future supply only
     "goods in transit - sd": WarehouseType.IN_TRANSIT,
     "goods in transit - wh": WarehouseType.IN_TRANSIT,
     "goods in transit": WarehouseType.IN_TRANSIT,
     "in transit": WarehouseType.IN_TRANSIT,
-    
     # NOT_AVAILABLE - cannot satisfy demand
     "work in progress - sd": WarehouseType.NOT_AVAILABLE,
     "work in progress - wh": WarehouseType.NOT_AVAILABLE,
@@ -50,7 +52,6 @@ DEFAULT_WAREHOUSE_CLASSIFICATIONS: Dict[str, WarehouseType] = {
     "rejected - sd": WarehouseType.NOT_AVAILABLE,
     "rejected - wh": WarehouseType.NOT_AVAILABLE,
     "scrap": WarehouseType.NOT_AVAILABLE,
-    
     # GROUP - logical containers
     "all warehouses - sd": WarehouseType.GROUP,
     "all warehouses - wh": WarehouseType.GROUP,
@@ -63,28 +64,28 @@ DEFAULT_WAREHOUSE_HIERARCHY: Dict[str, List[str]] = {
         "Stores - SD",
         "Finished Goods - SD",
         "Goods In Transit - SD",
-        "Work In Progress - SD"
+        "Work In Progress - SD",
     ],
     "all warehouses - wh": [
         "Stores - WH",
         "Finished Goods - WH",
         "Goods In Transit - WH",
-        "Work In Progress - WH"
+        "Work In Progress - WH",
     ],
 }
 
 
 class WarehouseManager:
     """Manages warehouse classification and hierarchy for OTP calculations."""
-    
+
     def __init__(
         self,
         custom_classifications: Optional[Dict[str, WarehouseType]] = None,
-        custom_hierarchy: Optional[Dict[str, List[str]]] = None
+        custom_hierarchy: Optional[Dict[str, List[str]]] = None,
     ):
         """
         Initialize warehouse manager.
-        
+
         Args:
             custom_classifications: Override default warehouse classifications
             custom_hierarchy: Override default warehouse hierarchy
@@ -92,21 +93,21 @@ class WarehouseManager:
         self.classifications = {**DEFAULT_WAREHOUSE_CLASSIFICATIONS}
         if custom_classifications:
             self.classifications.update(custom_classifications)
-        
+
         self.hierarchy = {**DEFAULT_WAREHOUSE_HIERARCHY}
         if custom_hierarchy:
             self.hierarchy.update(custom_hierarchy)
-    
+
     def classify_warehouse(self, warehouse_name: str) -> WarehouseType:
         """
         Classify a warehouse by its name.
-        
+
         Args:
             warehouse_name: Warehouse name (case-insensitive)
-            
+
         Returns:
             WarehouseType classification
-            
+
         Default behavior:
         - If exact match found in classifications, return that
         - If contains "transit" or "in transit", classify as IN_TRANSIT
@@ -117,13 +118,13 @@ class WarehouseManager:
         """
         if not warehouse_name:
             return WarehouseType.SELLABLE
-        
+
         normalized = warehouse_name.lower().strip()
-        
+
         # Exact match
         if normalized in self.classifications:
             return self.classifications[normalized]
-        
+
         # Pattern matching for unmapped warehouses
         if "transit" in normalized or "in transit" in normalized:
             return WarehouseType.IN_TRANSIT
@@ -135,49 +136,47 @@ class WarehouseManager:
             return WarehouseType.GROUP
         elif "scrap" in normalized or "reject" in normalized:
             return WarehouseType.NOT_AVAILABLE
-        
+
         # Default to SELLABLE (stores-like warehouse)
         return WarehouseType.SELLABLE
-    
+
     def is_group_warehouse(self, warehouse_name: str) -> bool:
         """Check if warehouse is a group warehouse."""
         return self.classify_warehouse(warehouse_name) == WarehouseType.GROUP
-    
+
     def get_child_warehouses(self, group_warehouse: str) -> List[str]:
         """
         Get child warehouses of a group warehouse.
-        
+
         Args:
             group_warehouse: Group warehouse name
-            
+
         Returns:
             List of child warehouse names, or empty list if not a group
         """
         normalized = group_warehouse.lower().strip()
         return self.hierarchy.get(normalized, [])
-    
+
     def expand_warehouse_list(
-        self,
-        warehouse_names: List[str],
-        deduplicate: bool = True
+        self, warehouse_names: List[str], deduplicate: bool = True
     ) -> List[str]:
         """
         Expand warehouse list, replacing group warehouses with their children.
-        
+
         Args:
             warehouse_names: List of warehouse names (may include groups)
             deduplicate: Remove duplicates from result
-            
+
         Returns:
             Expanded list of non-group warehouses
-            
+
         Example:
             expand_warehouse_list(["Stores - SD", "All Warehouses - SD"])
-            -> ["Stores - SD", "Finished Goods - SD", "Goods In Transit - SD", 
+            -> ["Stores - SD", "Finished Goods - SD", "Goods In Transit - SD",
                 "Work In Progress - SD"]
         """
         expanded: List[str] = []
-        
+
         for warehouse in warehouse_names:
             if self.is_group_warehouse(warehouse):
                 children = self.get_child_warehouses(warehouse)
@@ -190,7 +189,7 @@ class WarehouseManager:
                     )
             else:
                 expanded.append(warehouse)
-        
+
         if deduplicate:
             # Preserve order while removing duplicates
             seen: Set[str] = set()
@@ -201,27 +200,25 @@ class WarehouseManager:
                     seen.add(wh_normalized)
                     result.append(wh)
             return result
-        
+
         return expanded
-    
+
     def filter_available_warehouses(
-        self,
-        warehouse_names: List[str],
-        include_types: Optional[List[WarehouseType]] = None
+        self, warehouse_names: List[str], include_types: Optional[List[WarehouseType]] = None
     ) -> List[str]:
         """
         Filter warehouses by type.
-        
+
         Args:
             warehouse_names: List of warehouse names
             include_types: Types to include (default: [SELLABLE, NEEDS_PROCESSING])
-            
+
         Returns:
             Filtered list of warehouses matching desired types
         """
         if include_types is None:
             include_types = [WarehouseType.SELLABLE, WarehouseType.NEEDS_PROCESSING]
-        
+
         result = []
         for warehouse in warehouse_names:
             wh_type = self.classify_warehouse(warehouse)
@@ -232,26 +229,22 @@ class WarehouseManager:
                     f"Excluding warehouse '{warehouse}' (type: {wh_type}, "
                     f"not in {include_types})"
                 )
-        
+
         return result
-    
-    def get_availability_reason(
-        self,
-        warehouse_name: str,
-        qty: float
-    ) -> str:
+
+    def get_availability_reason(self, warehouse_name: str, qty: float) -> str:
         """
         Generate human-readable reason for warehouse availability status.
-        
+
         Args:
             warehouse_name: Warehouse name
             qty: Quantity in warehouse
-            
+
         Returns:
             Human-readable explanation string
         """
         wh_type = self.classify_warehouse(warehouse_name)
-        
+
         if wh_type == WarehouseType.SELLABLE:
             return f"{qty} units available in {warehouse_name} (ready to ship)"
         elif wh_type == WarehouseType.NEEDS_PROCESSING:
@@ -262,7 +255,7 @@ class WarehouseManager:
             return f"{qty} units in {warehouse_name} (not available for fulfillment)"
         elif wh_type == WarehouseType.GROUP:
             return f"{warehouse_name} is a group warehouse (must expand to children)"
-        
+
         return f"{qty} units in {warehouse_name}"
 
 

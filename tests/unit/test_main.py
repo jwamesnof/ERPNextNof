@@ -47,9 +47,9 @@ class TestHealthCheckEndpoint:
             mock_instance = MagicMock()
             mock_client_class.return_value.__enter__.return_value = mock_instance
             mock_instance.health_check.return_value = True
-            
+
             response = client.get("/health")
-            
+
             assert response.status_code == 200
             data = response.json()
             assert data["status"] == "healthy"
@@ -62,9 +62,9 @@ class TestHealthCheckEndpoint:
             mock_instance = MagicMock()
             mock_client_class.return_value.__enter__.return_value = mock_instance
             mock_instance.health_check.return_value = False
-            
+
             response = client.get("/health")
-            
+
             assert response.status_code == 200
             data = response.json()
             assert data["status"] == "degraded"
@@ -75,9 +75,9 @@ class TestHealthCheckEndpoint:
         """Test health check handles exceptions gracefully."""
         with patch("src.main.ERPNextClient") as mock_client_class:
             mock_client_class.return_value.__enter__.side_effect = Exception("Connection error")
-            
+
             response = client.get("/health")
-            
+
             assert response.status_code == 200
             data = response.json()
             assert data["status"] == "degraded"
@@ -93,10 +93,10 @@ class TestGlobalExceptionHandler:
         # Trigger an exception by requesting a non-existent route with invalid data
         # This is tricky - we need to trigger an exception in a route
         # For now, we'll test the structure indirectly by checking error responses
-        
+
         # Try an endpoint with invalid data that might trigger validation error
         response = client.post("/otp/promise", json={})
-        
+
         # Should return 422 for validation error, not 500 (validation is handled)
         assert response.status_code == 422  # Pydantic validation error
 
@@ -104,7 +104,7 @@ class TestGlobalExceptionHandler:
         """Test that exception handler returns proper format."""
         # Test with an invalid endpoint
         response = client.get("/nonexistent/endpoint/path")
-        
+
         assert response.status_code == 404
         data = response.json()
         assert "detail" in data
@@ -116,14 +116,14 @@ class TestCORSMiddleware:
     def test_cors_headers_present(self):
         """Test that CORS headers are present in responses."""
         response = client.options("/health")
-        
+
         # OPTIONS request should work for CORS preflight
         assert response.status_code in [200, 405]  # 405 if OPTIONS not explicitly handled
 
     def test_cors_allows_origins(self):
         """Test that CORS allows configured origins."""
         response = client.get("/health", headers={"Origin": "http://localhost:3000"})
-        
+
         assert response.status_code == 200
         # CORS headers should be present (or not explicitly denied)
 
@@ -137,10 +137,10 @@ class TestRouterInclusion:
         # Actually, /otp/health might not exist, but /otp/promise should
         response = client.get("/openapi.json")
         assert response.status_code == 200
-        
+
         data = response.json()
         paths = data.get("paths", {})
-        
+
         # Check that OTP endpoints are registered
         otp_endpoints = [p for p in paths.keys() if p.startswith("/otp")]
         assert len(otp_endpoints) > 0
@@ -149,10 +149,10 @@ class TestRouterInclusion:
         """Test that demo_data router endpoints are accessible."""
         response = client.get("/openapi.json")
         assert response.status_code == 200
-        
+
         data = response.json()
         paths = data.get("paths", {})
-        
+
         # Check that demo endpoints might be registered
         # Note: demo_data routes might be under /demo or similar
         all_paths = list(paths.keys())
@@ -165,7 +165,7 @@ class TestErrorResponseFormats:
     def test_404_not_found_format(self):
         """Test 404 error response format."""
         response = client.get("/this/path/does/not/exist")
-        
+
         assert response.status_code == 404
         data = response.json()
         assert "detail" in data
@@ -173,7 +173,7 @@ class TestErrorResponseFormats:
     def test_422_validation_error_format(self):
         """Test 422 validation error response format."""
         response = client.post("/otp/promise", json={"invalid": "data"})
-        
+
         assert response.status_code == 422
         data = response.json()
         assert "detail" in data
@@ -182,7 +182,7 @@ class TestErrorResponseFormats:
         """Test 405 method not allowed response format."""
         # Try POST on a GET-only endpoint
         response = client.post("/health")
-        
+
         assert response.status_code == 405
         data = response.json()
         assert "detail" in data
@@ -195,8 +195,8 @@ class TestStartupShutdownEvents:
         """Test that startup event is triggered (indirectly)."""
         # Since TestClient doesn't trigger startup/shutdown events by default,
         # we test that the app is configured correctly
-        assert hasattr(app, 'router')
-        
+        assert hasattr(app, "router")
+
         # Check that routes are registered
         assert len(app.routes) > 0
 
@@ -204,7 +204,7 @@ class TestStartupShutdownEvents:
         """Test that shutdown event handler is configured."""
         # Check that the app has the necessary hooks
         # This is an indirect test since we can't easily trigger shutdown
-        assert hasattr(app, 'router')
+        assert hasattr(app, "router")
 
 
 class TestEndpointRegistration:
@@ -215,7 +215,7 @@ class TestEndpointRegistration:
         response = client.get("/openapi.json")
         data = response.json()
         paths = data.get("paths", {})
-        
+
         assert "/otp/promise" in paths
         assert "post" in paths["/otp/promise"]
 
@@ -224,7 +224,7 @@ class TestEndpointRegistration:
         response = client.get("/openapi.json")
         data = response.json()
         paths = data.get("paths", {})
-        
+
         assert "/otp/apply" in paths
         assert "post" in paths["/otp/apply"]
 
@@ -233,7 +233,7 @@ class TestEndpointRegistration:
         response = client.get("/openapi.json")
         data = response.json()
         paths = data.get("paths", {})
-        
+
         assert "/otp/sales-orders" in paths
         assert "get" in paths["/otp/sales-orders"]
 
@@ -242,7 +242,7 @@ class TestEndpointRegistration:
         response = client.get("/openapi.json")
         data = response.json()
         paths = data.get("paths", {})
-        
+
         assert "/otp/sales-orders/{sales_order_id}" in paths
         assert "get" in paths["/otp/sales-orders/{sales_order_id}"]
 
@@ -256,15 +256,15 @@ class TestHealthCheckResponseModel:
             mock_instance = MagicMock()
             mock_client_class.return_value.__enter__.return_value = mock_instance
             mock_instance.health_check.return_value = True
-            
+
             response = client.get("/health")
             data = response.json()
-            
+
             assert "status" in data
             assert "version" in data
             assert "erpnext_connected" in data
             assert "message" in data
-            
+
             assert data["version"] == "0.1.0"
 
     def test_health_check_version_consistency(self):
@@ -273,10 +273,10 @@ class TestHealthCheckResponseModel:
             mock_instance = MagicMock()
             mock_client_class.return_value.__enter__.return_value = mock_instance
             mock_instance.health_check.return_value = True
-            
+
             response = client.get("/health")
             data = response.json()
-            
+
             assert data["version"] == app.version
 
 
@@ -288,11 +288,11 @@ class TestStartupAndShutdownEvents:
         """Test that startup event logs environment information."""
         import asyncio
         from src.main import startup_event
-        
+
         with patch("src.main.logger") as mock_logger:
             # Call the startup event directly
             asyncio.run(startup_event())
-            
+
             # Verify logging calls were made
             assert mock_logger.info.call_count >= 3
             # Check that environment and URL are logged
@@ -305,11 +305,11 @@ class TestStartupAndShutdownEvents:
         """Test that shutdown event logs shutdown message."""
         import asyncio
         from src.main import shutdown_event
-        
+
         with patch("src.main.logger") as mock_logger:
             # Call the shutdown event directly
             asyncio.run(shutdown_event())
-            
+
             # Verify shutdown was logged
             mock_logger.info.assert_called_once()
             assert "Shutting down" in str(mock_logger.info.call_args)
@@ -323,24 +323,24 @@ class TestGlobalExceptionHandler:
         """Test that exception handler includes detail in development mode."""
         with patch("src.main.settings") as mock_settings:
             mock_settings.otp_service_env = "development"
-            
+
             # Trigger an exception in an endpoint
             with patch("src.main.ERPNextClient") as mock_client:
                 mock_client.return_value.__enter__.side_effect = ValueError("Test error")
-                
+
                 response = client.get("/health")
-                
+
                 # Should still return 200 for health check even with error
                 # But if we had a different endpoint that raises...
                 # Let's just verify the exception handler exists
                 assert response.status_code == 200
 
-    @pytest.mark.unit  
+    @pytest.mark.unit
     def test_exception_handler_in_production_hides_detail(self):
         """Test that exception handler hides detail in production mode."""
         with patch("src.main.settings") as mock_settings:
             mock_settings.otp_service_env = "production"
-            
+
             # The global exception handler should hide details in production
             # This is tested by the handler code itself
             assert True  # Handler exists and is configured

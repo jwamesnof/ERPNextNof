@@ -10,11 +10,13 @@ sys.path.insert(0, str(project_root))
 
 import pytest
 from unittest.mock import MagicMock, patch
+
 try:
     from unittest.mock import AsyncMock
 except ImportError:
     # AsyncMock not available in Python < 3.8, create a simple mock
     from unittest.mock import MagicMock
+
     AsyncMock = MagicMock
 from src.config import settings
 
@@ -27,7 +29,8 @@ def today():
     """
     import pytz
     from datetime import datetime
-    tz = pytz.timezone('UTC')
+
+    tz = pytz.timezone("UTC")
     return datetime.now(tz).date()
 
 
@@ -64,11 +67,9 @@ def mock_warehouse_manager():
 @pytest.fixture(scope="module")
 def sample_promise_request():
     """Fixture providing a sample promise request (module-scoped)."""
-    from src.models.request_models import (
-        PromiseRequest, ItemRequest, PromiseRules, DesiredDateMode
-    )
+    from src.models.request_models import PromiseRequest, ItemRequest, PromiseRules, DesiredDateMode
     from datetime import datetime
-    
+
     return PromiseRequest(
         customer="CUST-001",
         items=[
@@ -91,10 +92,13 @@ def sample_promise_request():
 def sample_promise_response():
     """Fixture providing a sample promise response (module-scoped)."""
     from src.models.response_models import (
-        PromiseResponse, ItemPlan, FulfillmentSource, PromiseStatus
+        PromiseResponse,
+        ItemPlan,
+        FulfillmentSource,
+        PromiseStatus,
     )
     from datetime import datetime
-    
+
     return PromiseResponse(
         status=PromiseStatus.OK,
         promise_date=datetime(2024, 2, 15).date(),

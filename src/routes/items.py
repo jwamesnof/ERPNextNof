@@ -15,17 +15,17 @@ def get_item_stock(
 ) -> Dict[str, Any]:
     """
     Get warehouse-specific stock data for an item.
-    
+
     Returns actual stock, reserved stock, and available stock (actual - reserved).
     Used by frontend to display dynamic stock metrics when warehouse is changed.
-    
+
     Args:
         item_code: ERPNext item code (e.g., "SKU001")
         warehouse: Warehouse name (e.g., "Stores - SD")
-    
+
     Returns:
         dict with stock_actual, stock_reserved, stock_available
-    
+
     Raises:
         HTTPException(404): If item doesn't exist in warehouse
         HTTPException(500): If ERPNext query fails
@@ -36,58 +36,54 @@ def get_item_stock(
             raise HTTPException(status_code=400, detail="item_code is required")
         if not warehouse or not warehouse.strip():
             raise HTTPException(status_code=400, detail="warehouse is required")
-        
+
         # Query ERPNext Bin doctype for this item + warehouse combination
         # Bin doctype stores warehouse-wise stock data for each item
         try:
             with ERPNextClient() as client:
                 bin_data = client.get_value(
-                    'Bin',
+                    "Bin",
                     filters={
-                        'item_code': item_code.strip(),
-                        'warehouse': warehouse.strip(),
+                        "item_code": item_code.strip(),
+                        "warehouse": warehouse.strip(),
                     },
-                    fieldname=['actual_qty', 'reserved_qty'],
+                    fieldname=["actual_qty", "reserved_qty"],
                 )
         except ERPNextClientError as e:
             logger.error(f"ERPNext error fetching stock for {item_code} in {warehouse}: {e}")
             if "404" in str(e) or "not found" in str(e).lower():
                 raise HTTPException(
                     status_code=404,
-                    detail=f"Item '{item_code}' not found in warehouse '{warehouse}'"
+                    detail=f"Item '{item_code}' not found in warehouse '{warehouse}'",
                 )
             raise HTTPException(status_code=502, detail=f"ERPNext error: {str(e)}")
-        
+
         # If no bin record exists, item has no stock in this warehouse
         if bin_data is None:
             raise HTTPException(
-                status_code=404,
-                detail=f"Item '{item_code}' not found in warehouse '{warehouse}'"
+                status_code=404, detail=f"Item '{item_code}' not found in warehouse '{warehouse}'"
             )
-        
+
         # Extract quantities (default to 0 if missing)
-        stock_actual = float(bin_data.get('actual_qty') or 0)
-        stock_reserved = float(bin_data.get('reserved_qty') or 0)
+        stock_actual = float(bin_data.get("actual_qty") or 0)
+        stock_reserved = float(bin_data.get("reserved_qty") or 0)
         stock_available = stock_actual - stock_reserved
-        
+
         return {
             "item_code": item_code.strip(),
             "warehouse": warehouse.strip(),
             "stock_actual": stock_actual,
             "stock_reserved": stock_reserved,
-            "stock_available": stock_available
+            "stock_available": stock_available,
         }
-        
+
     except HTTPException:
         # Re-raise HTTP exceptions as-is
         raise
     except Exception as e:
         # Catch any unexpected errors from ERPNext
         logger.error(f"Error fetching stock for {item_code} in {warehouse}: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to fetch stock data: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to fetch stock data: {str(e)}")
 
 
 @router.get("/stock")
@@ -97,11 +93,11 @@ async def get_stock(
 ) -> Dict[str, Any]:
     """
     Get warehouse-specific stock data for an item.
-    
+
     **Parameters:**
     - `item_code` (string, required): ERPNext item code (e.g., "SKU001")
     - `warehouse` (string, required): Warehouse name (e.g., "Stores - SD")
-    
+
     **Response (200 OK):**
     ```json
     {
@@ -112,7 +108,7 @@ async def get_stock(
       "stock_available": 80
     }
     ```
-    
+
     **Error Responses:**
     - **404 Not Found**: Item doesn't exist in specified warehouse
     - **400 Bad Request**: Missing required parameters

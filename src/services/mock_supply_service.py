@@ -17,7 +17,7 @@ class MockSupplyService:
     Expected CSV structure:
     - Section 1 (Stock): Headers include "item_code", "warehouse", "actual_qty", "reserved_qty", "projected_qty"
     - Section 2 (Purchase Orders): Headers include "po_id", "item_code", "qty", "expected_date", "warehouse"
-    
+
     The file contains an empty row separator between the two sections.
     """
 
@@ -84,10 +84,7 @@ class MockSupplyService:
         expected_raw = (row.get("PO_Expected_Date") or row.get("expected_date") or "").strip()
         qty_val = row.get("PO_Quantity") or row.get("qty")
         warehouse = (
-            row.get("PO_Warehouse")
-            or row.get("Warehouse (Items)")
-            or row.get("warehouse")
-            or ""
+            row.get("PO_Warehouse") or row.get("Warehouse (Items)") or row.get("warehouse") or ""
         ).strip()
 
         if not po_id or not item_code or not expected_raw:
@@ -184,12 +181,10 @@ class MockSupplyService:
             "available_qty": projected,
         }
 
-    def get_incoming_supply(
-        self, item_code: str, after_date: Optional[date] = None
-    ) -> Dict:
+    def get_incoming_supply(self, item_code: str, after_date: Optional[date] = None) -> Dict:
         """
         Get incoming supply from mock PO data.
-        
+
         Returns:
             Dict with structure: {"supply": [...], "access_error": None}
             Matches format returned by StockService for consistency.

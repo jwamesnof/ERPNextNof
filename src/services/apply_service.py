@@ -26,7 +26,7 @@ class ApplyService:
     ) -> ApplyPromiseResponse:
         """
         Apply promise to a Sales Order in ERPNext.
-        
+
         Actions:
         - add_comment: Add a comment to the SO
         - set_custom_field: Update custom field (if exists)
@@ -118,7 +118,7 @@ class ApplyService:
     ) -> ProcurementSuggestionResponse:
         """
         Create procurement suggestion in ERPNext.
-        
+
         Types:
         - material_request: Create a Material Request
         - draft_po: Create a draft Purchase Order (future)
@@ -135,9 +135,7 @@ class ApplyService:
                 mr_response = self.client.create_material_request(items, erpnext_priority)
 
                 mr_name = mr_response.get("name", "Unknown")
-                erpnext_url = (
-                    f"{settings.erpnext_base_url}/app/material-request/{mr_name}"
-                )
+                erpnext_url = f"{settings.erpnext_base_url}/app/material-request/{mr_name}"
 
                 return ProcurementSuggestionResponse(
                     status="success",

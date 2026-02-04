@@ -125,27 +125,24 @@ class TestPromiseCalculationWithCalendar:
         """If today is Friday, base_date should be Sunday when no_weekends=True."""
         # Mock today as Friday
         friday = date(2026, 1, 31)
-        
+
         # Request with no_weekends enabled
         items = [ItemRequest(item_code="TEST_ITEM", qty=1, warehouse="Stores - SD")]
         rules = PromiseRules(no_weekends=True, lead_time_buffer_days=0)
-        
+
         # Override _get_today to return Friday
         original_get_today = promise_service._get_today
         promise_service._get_today = lambda tz: friday
-        
+
         try:
             result = promise_service.calculate_promise(
-                customer="Test Customer",
-                items=items,
-                rules=rules
+                customer="Test Customer", items=items, rules=rules
             )
-            
+
             # Promise date should never be Friday or Saturday
             # Use promise_date_raw if promise_date is None (when can't fulfill)
             check_date = result.promise_date or result.promise_date_raw
-            assert check_date.weekday() not in (4, 5), \
-                f"Promise date {check_date} falls on weekend"
+            assert check_date.weekday() not in (4, 5), f"Promise date {check_date} falls on weekend"
         finally:
             promise_service._get_today = original_get_today
 
@@ -153,25 +150,22 @@ class TestPromiseCalculationWithCalendar:
         """Promise date must never land on Friday or Saturday."""
         # Test with Thursday (should be fine)
         thursday = date(2026, 1, 30)
-        
+
         items = [ItemRequest(item_code="TEST_ITEM", qty=1, warehouse="Stores - SD")]
         rules = PromiseRules(no_weekends=True, lead_time_buffer_days=1)
-        
+
         original_get_today = promise_service._get_today
         promise_service._get_today = lambda tz: thursday
-        
+
         try:
             result = promise_service.calculate_promise(
-                customer="Test Customer",
-                items=items,
-                rules=rules
+                customer="Test Customer", items=items, rules=rules
             )
-            
+
             # With 1 day buffer from Thursday, should skip weekend and be Sunday
             check_date = result.promise_date or result.promise_date_raw
-            assert check_date.weekday() not in (4, 5), \
-                f"Promise date {check_date} falls on weekend"
-            
+            assert check_date.weekday() not in (4, 5), f"Promise date {check_date} falls on weekend"
+
             # Should be Sunday (next working day after Thursday + 1)
             sunday = date(2026, 2, 2)
             assert check_date == sunday
@@ -181,23 +175,21 @@ class TestPromiseCalculationWithCalendar:
     def test_processing_lead_time_counts_working_days(self, promise_service):
         """Processing lead time should count only working days."""
         thursday = date(2026, 1, 30)
-        
+
         # Set item with processing lead time = 1 day
         promise_service.item_lead_times = {"LEAD_TEST": 1}
-        
+
         items = [ItemRequest(item_code="LEAD_TEST", qty=1, warehouse="Stores - SD")]
         rules = PromiseRules(no_weekends=True, lead_time_buffer_days=0)
-        
+
         original_get_today = promise_service._get_today
         promise_service._get_today = lambda tz: thursday
-        
+
         try:
             result = promise_service.calculate_promise(
-                customer="Test Customer",
-                items=items,
-                rules=rules
+                customer="Test Customer", items=items, rules=rules
             )
-            
+
             # Thursday + 1 working day processing = Sunday (skip Fri/Sat)
             # But we have shortage, so it defaults to base date
             # Let's check that ship_ready_date in plan follows calendar
@@ -210,43 +202,41 @@ class TestPromiseCalculationWithCalendar:
     def test_weekend_adjustment_reason_included(self, promise_service):
         """Reasons should mention weekend adjustment."""
         thursday = date(2026, 1, 30)
-        
+
         items = [ItemRequest(item_code="TEST_ITEM", qty=1, warehouse="Stores - SD")]
         rules = PromiseRules(no_weekends=True, lead_time_buffer_days=0)
-        
+
         original_get_today = promise_service._get_today
         promise_service._get_today = lambda tz: thursday
-        
+
         try:
             result = promise_service.calculate_promise(
-                customer="Test Customer",
-                items=items,
-                rules=rules
+                customer="Test Customer", items=items, rules=rules
             )
-            
+
             # Check that reasons mention weekend handling
             reasons_text = " ".join(result.reasons).lower()
-            assert "weekend" in reasons_text or "friday" in reasons_text or "saturday" in reasons_text
+            assert (
+                "weekend" in reasons_text or "friday" in reasons_text or "saturday" in reasons_text
+            )
         finally:
             promise_service._get_today = original_get_today
 
     def test_no_weekends_false_allows_friday_saturday(self, promise_service):
         """When no_weekends=False, Friday and Saturday should be allowed."""
         thursday = date(2026, 1, 30)
-        
+
         items = [ItemRequest(item_code="TEST_ITEM", qty=1, warehouse="Stores - SD")]
         rules = PromiseRules(no_weekends=False, lead_time_buffer_days=1)
-        
+
         original_get_today = promise_service._get_today
         promise_service._get_today = lambda tz: thursday
-        
+
         try:
             result = promise_service.calculate_promise(
-                customer="Test Customer",
-                items=items,
-                rules=rules
+                customer="Test Customer", items=items, rules=rules
             )
-            
+
             # With no_weekends=False, Friday is allowed
             # Thursday + 1 day buffer = Friday
             friday = date(2026, 1, 31)
@@ -272,15 +262,15 @@ class TestIncomingSupplyWeekendAdjustment:
         """PO arriving on Friday should be treated as arriving on Sunday."""
         # This test requires mocking incoming_supply with Friday date
         # For now, we'll test the logic directly
-        
+
         base = date(2026, 1, 26)
         friday = TestCalendarUtilities.find_next_weekday(base, 4)
         sunday = TestCalendarUtilities.find_next_weekday(friday, 6)
-        
+
         # Test the calendar logic directly
         assert PromiseService.is_working_day(friday) is False
         assert PromiseService.next_working_day(friday) == sunday
-        
+
         # In actual promise calculation, if a PO has expected_date = Friday,
         # it should be adjusted to Sunday
         # This is verified in the implementation
@@ -290,7 +280,7 @@ class TestIncomingSupplyWeekendAdjustment:
         base = date(2026, 1, 26)
         saturday = TestCalendarUtilities.find_next_weekday(base, 5)
         sunday = TestCalendarUtilities.find_next_weekday(saturday, 6)
-        
+
         assert PromiseService.is_working_day(saturday) is False
         assert PromiseService.next_working_day(saturday) == sunday
 
@@ -311,7 +301,7 @@ class TestCutoffRuleWithCalendar:
         # This test would require mocking time to be after cutoff
         # The logic is implemented in _apply_cutoff_rule
         # which now uses add_working_days when no_weekends=True
-        
+
         base = date(2026, 1, 26)
         thursday = TestCalendarUtilities.find_next_weekday(base, 3)
         # Thursday + 1 working day = Sunday (skip Fri, Sat)

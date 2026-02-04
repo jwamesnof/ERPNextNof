@@ -55,7 +55,7 @@ class TestDesiredDateHandling:
         rules = PromiseRules(
             lead_time_buffer_days=1,
             no_weekends=False,
-            desired_date_mode=DesiredDateMode.LATEST_ACCEPTABLE
+            desired_date_mode=DesiredDateMode.LATEST_ACCEPTABLE,
         )
 
         response = promise_service.calculate_promise(
@@ -95,7 +95,7 @@ class TestDesiredDateHandling:
         rules = PromiseRules(
             lead_time_buffer_days=1,
             no_weekends=False,
-            desired_date_mode=DesiredDateMode.LATEST_ACCEPTABLE
+            desired_date_mode=DesiredDateMode.LATEST_ACCEPTABLE,
         )
 
         response = promise_service.calculate_promise(
@@ -125,7 +125,7 @@ class TestDesiredDateHandling:
         rules = PromiseRules(
             lead_time_buffer_days=1,
             no_weekends=False,
-            desired_date_mode=DesiredDateMode.STRICT_FAIL
+            desired_date_mode=DesiredDateMode.STRICT_FAIL,
         )
 
         response = promise_service.calculate_promise(
@@ -162,14 +162,14 @@ class TestDesiredDateHandling:
         rules = PromiseRules(
             lead_time_buffer_days=1,
             no_weekends=False,
-            desired_date_mode=DesiredDateMode.STRICT_FAIL
+            desired_date_mode=DesiredDateMode.STRICT_FAIL,
         )
 
         with pytest.raises(ValueError) as exc_info:
             promise_service.calculate_promise(
                 customer="CUST-001", items=[item], desired_date=desired, rules=rules
             )
-        
+
         assert "Cannot meet desired delivery date" in str(exc_info.value)
         assert "Earliest possible promise" in str(exc_info.value)
 
@@ -191,7 +191,7 @@ class TestDesiredDateHandling:
             lead_time_buffer_days=1,
             no_weekends=False,
             processing_lead_time_days=1,
-            desired_date_mode=DesiredDateMode.NO_EARLY_DELIVERY
+            desired_date_mode=DesiredDateMode.NO_EARLY_DELIVERY,
         )
 
         response = promise_service.calculate_promise(
@@ -232,7 +232,7 @@ class TestDesiredDateHandling:
         rules = PromiseRules(
             lead_time_buffer_days=1,
             no_weekends=False,
-            desired_date_mode=DesiredDateMode.NO_EARLY_DELIVERY
+            desired_date_mode=DesiredDateMode.NO_EARLY_DELIVERY,
         )
 
         response = promise_service.calculate_promise(
@@ -271,7 +271,7 @@ class TestDesiredDateHandling:
         rules = PromiseRules(
             lead_time_buffer_days=1,
             no_weekends=False,
-            desired_date_mode=DesiredDateMode.LATEST_ACCEPTABLE
+            desired_date_mode=DesiredDateMode.LATEST_ACCEPTABLE,
         )
 
         response = promise_service.calculate_promise(
@@ -339,7 +339,7 @@ class TestDesiredDateHandling:
         rules = PromiseRules(
             lead_time_buffer_days=1,
             no_weekends=False,
-            desired_date_mode=DesiredDateMode.LATEST_ACCEPTABLE
+            desired_date_mode=DesiredDateMode.LATEST_ACCEPTABLE,
         )
 
         # Scenario 1: Stock available -> on time

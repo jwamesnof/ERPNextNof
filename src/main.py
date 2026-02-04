@@ -54,7 +54,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 async def health_check():
     """
     Health check endpoint.
-    
+
     Verifies:
     - Service is running
     - ERPNext connection is working
@@ -93,8 +93,10 @@ async def startup_event():
     logger.info("Starting OTP Service...")
     logger.info(f"Environment: {settings.otp_service_env}")
     logger.info(f"ERPNext URL: {settings.erpnext_base_url}")
-    logger.info(f"API Documentation: http://{settings.otp_service_host}:{settings.otp_service_port}/docs")
-    
+    logger.info(
+        f"API Documentation: http://{settings.otp_service_host}:{settings.otp_service_port}/docs"
+    )
+
     # Log all registered routes for debugging
     logger.info("\n=== Registered Routes ===")
     for route in app.routes:

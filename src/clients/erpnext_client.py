@@ -18,7 +18,7 @@ class ERPNextClientError(Exception):
 class ERPNextClient:
     """
     HTTP client for ERPNext REST API.
-    
+
     Handles authentication, error handling, and provides typed methods
     for common ERPNext operations needed by OTP service.
     """
@@ -66,9 +66,7 @@ class ERPNextClient:
 
         except httpx.HTTPStatusError as e:
             logger.error(f"HTTP error: {e.response.status_code} - {e.response.text}")
-            raise ERPNextClientError(
-                f"HTTP {e.response.status_code}: {e.response.text}"
-            ) from e
+            raise ERPNextClientError(f"HTTP {e.response.status_code}: {e.response.text}") from e
         except httpx.TimeoutException as e:
             logger.error(f"Request timeout: {e}")
             raise ERPNextClientError("Request to ERPNext timed out") from e
@@ -76,12 +74,10 @@ class ERPNextClient:
             logger.error(f"Unexpected error: {e}")
             raise ERPNextClientError(f"Unexpected error: {str(e)}") from e
 
-    def get_stock_balance(
-        self, item_code: str, warehouse: Optional[str] = None
-    ) -> Dict[str, Any]:
+    def get_stock_balance(self, item_code: str, warehouse: Optional[str] = None) -> Dict[str, Any]:
         """
         Get current stock balance for an item.
-        
+
         Returns:
             {
                 "item_code": "ITEM-001",
@@ -101,7 +97,7 @@ class ERPNextClient:
     def get_bin_details(self, item_code: str, warehouse: str) -> Dict[str, Any]:
         """
         Get bin (stock ledger) details for item in warehouse.
-        
+
         Alternative method using frappe.client.get_list
         """
         params = {
@@ -111,7 +107,7 @@ class ERPNextClient:
 
         response = self.client.get("/api/resource/Bin", params=params)
         data = self._handle_response(response)
-        
+
         # ERPNext returns data wrapped in a 'data' key
         if isinstance(data, dict) and "data" in data:
             bin_list = data["data"]
@@ -119,11 +115,11 @@ class ERPNextClient:
             bin_list = data
         else:
             bin_list = []
-        
+
         # Return first bin or empty result
         if bin_list and len(bin_list) > 0:
             return bin_list[0]
-        
+
         return {
             "item_code": item_code,
             "warehouse": warehouse,
@@ -135,7 +131,7 @@ class ERPNextClient:
     def get_incoming_purchase_orders(self, item_code: str) -> List[Dict[str, Any]]:
         """
         Get open purchase orders with expected delivery for an item.
-        
+
         Returns list of:
             {
                 "po_id": "PO-00123",
@@ -147,19 +143,23 @@ class ERPNextClient:
             }
         """
         params = {
-            "filters": json.dumps([
-                ["item_code", "=", item_code],
-                ["docstatus", "=", 1],  # Submitted
-                ["qty", ">", "received_qty"],  # Not fully received
-            ]),
-            "fields": json.dumps([
-                "parent",
-                "item_code",
-                "qty",
-                "received_qty",
-                "schedule_date",
-                "warehouse",
-            ]),
+            "filters": json.dumps(
+                [
+                    ["item_code", "=", item_code],
+                    ["docstatus", "=", 1],  # Submitted
+                    ["qty", ">", "received_qty"],  # Not fully received
+                ]
+            ),
+            "fields": json.dumps(
+                [
+                    "parent",
+                    "item_code",
+                    "qty",
+                    "received_qty",
+                    "schedule_date",
+                    "warehouse",
+                ]
+            ),
             "order_by": "schedule_date asc",
             "limit_page_length": 500,
         }
@@ -201,7 +201,7 @@ class ERPNextClient:
     ) -> List[Dict[str, Any]]:
         """
         Get Sales Orders list from ERPNext via Resource API.
-        
+
         Args:
             limit: Max number of results (default 20, max 100)
             offset: Number of records to skip for pagination (default 0)
@@ -210,10 +210,10 @@ class ERPNextClient:
             from_date: Filter transaction_date >= this date (ISO format)
             to_date: Filter transaction_date <= this date (ISO format)
             search: Search in SO name or customer name
-        
+
         Returns:
             List of Sales Order dictionaries with minimal fields
-        
+
         Note:
             Uses Resource API (/api/resource/Sales Order), NOT method API.
             Do NOT pass doctype in params - it's in the URL path.
@@ -260,15 +260,13 @@ class ERPNextClient:
 
         response = self.client.get("/api/resource/Sales Order", params=params)
         data = self._handle_response(response)
-        
+
         # Resource API returns list directly or wrapped in "data"
         if isinstance(data, dict) and "data" in data:
             return data["data"] if isinstance(data["data"], list) else []
         return data if isinstance(data, list) else []
 
-    def add_comment_to_doc(
-        self, doctype: str, docname: str, comment_text: str
-    ) -> Dict[str, Any]:
+    def add_comment_to_doc(self, doctype: str, docname: str, comment_text: str) -> Dict[str, Any]:
         """Add a comment to a document."""
         data = {
             "reference_doctype": doctype,
@@ -286,15 +284,15 @@ class ERPNextClient:
         """Update a custom field on Sales Order."""
         data = {field_name: value}
 
-        response = self.client.put(
-            f"/api/resource/Sales Order/{sales_order_id}", json=data
-        )
+        response = self.client.put(f"/api/resource/Sales Order/{sales_order_id}", json=data)
         return self._handle_response(response)
 
-    def create_material_request(self, items: List[Dict[str, Any]], priority: str = "Medium") -> Dict[str, Any]:
+    def create_material_request(
+        self, items: List[Dict[str, Any]], priority: str = "Medium"
+    ) -> Dict[str, Any]:
         """
         Create a Material Request for procurement.
-        
+
         Args:
             items: List of items with item_code, qty, schedule_date
             priority: High, Medium, Low
@@ -321,11 +319,11 @@ class ERPNextClient:
 
         response = self.client.post("/api/resource/Material Request", json=data)
         result = self._handle_response(response)
-        
+
         # ERPNext returns the created doc
         if isinstance(result, dict):
             return result
-        
+
         return {"name": "Unknown"}
 
     def health_check(self) -> bool:

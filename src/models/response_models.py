@@ -7,6 +7,7 @@ from enum import Enum
 
 class PromiseStatus(str, Enum):
     """Status of promise calculation."""
+
     OK = "OK"  # Promise calculated successfully
     CANNOT_FULFILL = "CANNOT_FULFILL"  # Insufficient stock/supply
     CANNOT_PROMISE_RELIABLY = "CANNOT_PROMISE_RELIABLY"  # Missing data (e.g., PO access denied)
@@ -18,7 +19,9 @@ class FulfillmentSource(BaseModel):
     source: str = Field(..., description="Source type: 'stock', 'purchase_order', 'production'")
     qty: float = Field(..., description="Quantity from this source")
     available_date: date = Field(..., description="Date when available")
-    ship_ready_date: date = Field(..., description="Date ready to ship (available_date + processing_lead_time)")
+    ship_ready_date: date = Field(
+        ..., description="Date ready to ship (available_date + processing_lead_time)"
+    )
     warehouse: Optional[str] = Field(None, description="Warehouse name")
     po_id: Optional[str] = Field(None, description="Purchase Order ID (if applicable)")
     expected_date: Optional[date] = Field(None, description="Expected receipt date for PO")
@@ -45,21 +48,37 @@ class PromiseOption(BaseModel):
 class PromiseResponse(BaseModel):
     """Response from promise calculation."""
 
-    status: PromiseStatus = Field(..., description="Overall status: OK, CANNOT_FULFILL, or CANNOT_PROMISE_RELIABLY")
-    promise_date: Optional[date] = Field(None, description="Final delivery date (null if CANNOT_FULFILL)")
-    promise_date_raw: Optional[date] = Field(None, description="Computed promise before desired_date adjustments")
-    desired_date: Optional[date] = Field(None, description="Customer requested delivery date (echoed from request)")
-    desired_date_mode: Optional[str] = Field(None, description="Mode used for desired_date interpretation")
-    on_time: Optional[bool] = Field(None, description="True if promise_date <= desired_date (when both provided)")
-    adjusted_due_to_no_early_delivery: bool = Field(False, description="True if promise was delayed to match desired_date in NO_EARLY_DELIVERY mode")
+    status: PromiseStatus = Field(
+        ..., description="Overall status: OK, CANNOT_FULFILL, or CANNOT_PROMISE_RELIABLY"
+    )
+    promise_date: Optional[date] = Field(
+        None, description="Final delivery date (null if CANNOT_FULFILL)"
+    )
+    promise_date_raw: Optional[date] = Field(
+        None, description="Computed promise before desired_date adjustments"
+    )
+    desired_date: Optional[date] = Field(
+        None, description="Customer requested delivery date (echoed from request)"
+    )
+    desired_date_mode: Optional[str] = Field(
+        None, description="Mode used for desired_date interpretation"
+    )
+    on_time: Optional[bool] = Field(
+        None, description="True if promise_date <= desired_date (when both provided)"
+    )
+    adjusted_due_to_no_early_delivery: bool = Field(
+        False,
+        description="True if promise was delayed to match desired_date in NO_EARLY_DELIVERY mode",
+    )
     can_fulfill: bool = Field(..., description="True if order is fully allocatable")
     confidence: str = Field(..., description="Confidence level: HIGH, MEDIUM, LOW")
     plan: List[ItemPlan] = Field(..., description="Fulfillment plan per item")
     reasons: List[str] = Field(..., description="Explanation of promise calculation")
-    blockers: List[str] = Field(default_factory=list, description="Issues preventing promise (e.g., insufficient stock, permission denied)")
-    options: List[PromiseOption] = Field(
-        default_factory=list, description="Alternative options"
+    blockers: List[str] = Field(
+        default_factory=list,
+        description="Issues preventing promise (e.g., insufficient stock, permission denied)",
     )
+    options: List[PromiseOption] = Field(default_factory=list, description="Alternative options")
 
 
 class ApplyPromiseResponse(BaseModel):
