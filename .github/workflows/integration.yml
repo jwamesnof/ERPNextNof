@@ -28,7 +28,31 @@ jobs:
           ERPNEXT_API_KEY: ${{ secrets.ERPNEXT_API_KEY }}
           ERPNEXT_API_SECRET: ${{ secrets.ERPNEXT_API_SECRET }}
         run: |
-          pytest tests/integration/ -v --tb=short
+          pytest tests/integration/ -v --tb=short --alluredir=allure-results
+
+      - name: Get Allure history
+        uses: actions/checkout@v4
+        if: always()
+        continue-on-error: true
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Generate Allure Report
+        uses: simple-elf/allure-report-action@master
+        if: always()
+        with:
+          allure_results: allure-results
+          allure_history: allure-history
+          keep_reports: 20
+
+      - name: Deploy Allure report to GitHub Pages
+        if: always()
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-history
 
       - name: Archive integration test results
         if: always()
@@ -38,3 +62,4 @@ jobs:
           path: |
             coverage.xml
             htmlcov/
+            allure-results/
