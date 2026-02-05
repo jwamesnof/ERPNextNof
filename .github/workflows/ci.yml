@@ -4,6 +4,13 @@ on:
   pull_request:
     branches: [main, develop]
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  pull-requests: write
+  checks: write
+
 jobs:
   unit-api-tests:
     name: Unit + API Tests + Coverage
@@ -67,6 +74,14 @@ jobs:
           ref: gh-pages
           path: gh-pages
 
+      - name: Download all Allure results
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          path: allure-results-all
+          pattern: allure-results-*
+          merge-multiple: true
+
       - name: Generate Allure Report
         uses: simple-elf/allure-report-action@master
         if: always()
@@ -75,14 +90,8 @@ jobs:
           allure_history: allure-history
           keep_reports: 20
 
-      - name: Ensure allure-history directory exists
-        if: always()
-        run: |
-          mkdir -p allure-history
-          ls -la allure-history || echo "Directory created"
-
       - name: Deploy Allure report to GitHub Pages
-        if: always()
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         continue-on-error: true
         uses: peaceiris/actions-gh-pages@v4
         with:
