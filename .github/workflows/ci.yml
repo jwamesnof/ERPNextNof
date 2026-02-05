@@ -3,7 +3,6 @@ name: CI - Tests and Coverage
 on:
   pull_request:
     branches: [main, develop]
-
 permissions:
   contents: read
   pages: write
@@ -66,6 +65,7 @@ jobs:
           coverage report --format=markdown > coverage_report.md
           coverage report
 
+
       - name: Get Allure history
         uses: actions/checkout@v4
         if: always()
@@ -75,7 +75,6 @@ jobs:
           path: gh-pages
 
       - name: Download all Allure results
-        if: always()
         uses: actions/download-artifact@v4
         with:
           path: allure-results-all
@@ -84,14 +83,13 @@ jobs:
 
       - name: Generate Allure Report
         uses: simple-elf/allure-report-action@master
-        if: always()
         with:
-          allure_results: allure-results
+          allure_results: allure-results-all
           allure_history: allure-history
           keep_reports: 20
 
-      - name: Deploy Allure report to GitHub Pages
-        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Publish Allure report to GitHub Pages
+        if: always() 
         continue-on-error: true
         uses: peaceiris/actions-gh-pages@v4
         with:
