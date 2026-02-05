@@ -319,7 +319,6 @@ ERPNEXT_TEST_PASSWORD=admin
 ## 🤖 CI/CD Pipeline
 
 ### PR Workflow (`.github/workflows/ci.yml`)
-- ✅ Linting (black, ruff)
 - ✅ Unit tests (165 tests)
 - ✅ API tests (58 tests)
 - ✅ Coverage report → Codecov

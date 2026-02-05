@@ -108,8 +108,6 @@ Unit tests validate individual components in isolation with mocked dependencies.
 - ✅ All error paths tested
 
 **Code Quality:**
-- ✅ Black formatting compliance
-- ✅ Ruff linting pass (0 errors)
 - ✅ All tests have docstrings
 - ✅ Proper setup/teardown in each test
 

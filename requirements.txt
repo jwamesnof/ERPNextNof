@@ -11,5 +11,3 @@ pytest-cov>=4.0.0
 pytest-mock>=3.10.0
 allure-pytest>=2.13.0
 playwright>=1.35.0
-black>=23.0.0
-ruff>=0.1.0
