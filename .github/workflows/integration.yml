@@ -1,4 +1,5 @@
 name: Manual Integration Tests
+# Workflow for testing against real ERPNext instance
 
 on:
   workflow_dispatch:  # Manual trigger only - for testing against real ERPNext
