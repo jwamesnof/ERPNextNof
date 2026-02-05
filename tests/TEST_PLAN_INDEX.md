@@ -2,9 +2,9 @@
 
 ## Overview
 
-This document indexes all test plans and traceability matrices across the project. Each test category (Unit, API, Integration, E2E) has its own comprehensive test plan documenting requirements, test cases, and traceability to source code.
+This document indexes all test plans and traceability matrices across the project. Each test category (Unit, API, Integration) has its own comprehensive test plan documenting requirements, test cases, and traceability to source code.
 
-**Project Coverage:** 251 tests across 4 categories  
+**Project Coverage:** 251 tests across 3 categories  
 **Overall Coverage:** 92% (1072 statements)  
 **Status:** ✅ All test plans created and linked  
 
@@ -19,13 +19,11 @@ This document indexes all test plans and traceability matrices across the projec
 | **Unit Tests** | 165 pass, 92% coverage, <15s | ✅ PASS |
 | **API Tests** | 58 pass, 100% endpoint coverage, <5s | ✅ PASS |
 | **Integration** | 20 pass, 75% real data coverage, <60s | ✅ PASS |
-| **E2E Framework** | 8 tests defined, POM ready, CI config | ✅ READY |
 
 **Project Acceptance Criteria:**
 - ✅ All unit tests pass (0 failures)
 - ✅ All API endpoints tested (100% coverage)
 - ✅ Integration with real ERPNext validated
-- ✅ E2E framework ready for implementation
 - ✅ CI/CD pipeline active (Codecov reporting)
 - ✅ 92% overall code coverage
 - ✅ 0 flaky tests
@@ -124,27 +122,6 @@ pytest tests/integration/ -v
 
 ---
 
-### 4. **E2E Tests** (8 tests, ready for implementation)
-**Purpose:** Validate complete user workflows through browser UI  
-**Location:** [tests/e2e/TEST_PLAN_AND_TRACEABILITY.md](e2e/TEST_PLAN_AND_TRACEABILITY.md)
-
-**Planned Coverage:**
-- User authentication & setup
-- Promise calculation workflow
-- Sales order operations
-- Stock query workflow
-- Error handling & edge cases
-
-**Framework:** Playwright (Python)  
-**Status:** 🔲 Ready for implementation  
-
-**Run Tests (when implemented):**
-```bash
-pytest tests/e2e/ -v --headed  # --headed to see browser
-```
-
----
-
 ## Test Execution Summary
 
 ```bash
@@ -155,7 +132,6 @@ pytest tests/ -v --cov=src --cov-report=html
 pytest tests/unit/ -v          # Unit tests only
 pytest tests/api/ -v           # API tests only
 pytest tests/integration/ -v   # Integration tests (requires RUN_INTEGRATION=1)
-pytest tests/e2e/ -v           # E2E tests (when implemented)
 
 # Run with coverage
 pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
@@ -176,16 +152,16 @@ pytest tests/unit/test_promise_service.py::TestPromiseCalculation::test_promise_
 
 ### Requirements to Test Cases
 
-| Requirement | Unit Tests | API Tests | Integration | E2E | Coverage |
-|------------|-----------|-----------|-------------|-----|----------|
-| Promise calculation | ✅ 14 tests | ✅ 4 tests | ✅ 6 tests | 🔲 | 100% |
-| Stock queries | ✅ 5 tests | ✅ 19 tests | ✅ (via mock) | 🔲 | 100% |
-| Warehouse handling | ✅ 2 tests | ✅ (implicit) | ✅ (via mock) | 🔲 | 100% |
-| Business rules (no weekends, cutoff) | ✅ 8 tests | ✅ (implicit) | ✅ 1 test | 🔲 | 100% |
-| Write-back to ERPNext | ✅ 4 tests | ✅ 2 tests | 🔲 (manual) | 🔲 | 100% |
-| Error handling | ✅ (various) | ✅ 14 tests | ✅ 5 tests | 🔲 | 95% |
-| Validation | ✅ 7 tests | ✅ 6 tests | ✅ 5 tests | 🔲 | 100% |
-| API contracts | ✅ (implicit) | ✅ 6 tests | ✅ (via mock) | 🔲 | 95% |
+| Requirement | Unit Tests | API Tests | Integration | Coverage |
+|------------|-----------|-----------|-------------|----------|
+| Promise calculation | ✅ 14 tests | ✅ 4 tests | ✅ 6 tests | 100% |
+| Stock queries | ✅ 5 tests | ✅ 19 tests | ✅ (via mock) | 100% |
+| Warehouse handling | ✅ 2 tests | ✅ (implicit) | ✅ (via mock) | 100% |
+| Business rules (no weekends, cutoff) | ✅ 8 tests | ✅ (implicit) | ✅ 1 test | 100% |
+| Write-back to ERPNext | ✅ 4 tests | ✅ 2 tests | 🔲 (manual) | 100% |
+| Error handling | ✅ (various) | ✅ 14 tests | ✅ 5 tests | 95% |
+| Validation | ✅ 7 tests | ✅ 6 tests | ✅ 5 tests | 100% |
+| API contracts | ✅ (implicit) | ✅ 6 tests | ✅ (via mock) | 95% |
 
 ---
 
@@ -199,7 +175,6 @@ pytest tests/unit/test_promise_service.py::TestPromiseCalculation::test_promise_
 │ Unit Tests       ████████████████████████░ 92%  165/165│
 │ API Tests        █████████████████████████ 100%  58/58  │
 │ Integration      ███████████████████░░░░░ 70%   20/20   │
-│ E2E Tests        ░░░░░░░░░░░░░░░░░░░░░░░░ 0%    0/8    │
 │                                                         │
 │ Total Tests:     ████████████████████░░░░ 92%   251/251│
 │ Statements:      1072 covered, 84 missing (92%)         │
@@ -217,7 +192,6 @@ pytest tests/unit/test_promise_service.py::TestPromiseCalculation::test_promise_
 |----------|---------|-------|----------|---------|
 | **ci.yml** | Every PR + push | Unit (165) + API (58) | ~1 min | Fast feedback |
 | **integration.yml** | Manual trigger | Integration (20) | ~3 min | Real ERPNext validation |
-| **e2e.yml** | (scheduled) | E2E (8) | ~2 min | User workflow validation |
 
 **See:** [.github/workflows/](../.github/workflows/) directory
 
@@ -230,7 +204,6 @@ pytest tests/unit/test_promise_service.py::TestPromiseCalculation::test_promise_
 | [Unit Test Plan](unit/TEST_PLAN_AND_TRACEABILITY.md) | Component testing | Developers |
 | [API Test Plan](api/TEST_PLAN_AND_TRACEABILITY.md) | Endpoint validation | QA, Developers |
 | [Integration Test Plan](integration/TEST_PLAN_AND_TRACEABILITY.md) | System testing | QA, DevOps |
-| [E2E Test Plan](e2e/TEST_PLAN_AND_TRACEABILITY.md) | User workflow testing | QA, Product |
 | [TESTS.md](../TESTS.md) | High-level test overview | All |
 | [INTEGRATION_TESTS.md](../INTEGRATION_TESTS.md) | Integration setup guide | DevOps, QA |
 
@@ -255,7 +228,6 @@ pytest tests/unit/test_promise_service.py::TestPromiseCalculation::test_promise_
 | Unit | 85% | 95% | 92% ✅ |
 | API | 90% | 100% | 100% ✅ |
 | Integration | 70% | 85% | 75% ✅ |
-| E2E | 50% | 70% | 0% (not yet) |
 | **Overall** | **80%** | **92%** | **92%** ✅ |
 
 ---
@@ -295,12 +267,10 @@ Test Execution Times (local machine):
 ├── Unit Tests:        ~10 seconds  (165 tests)
 ├── API Tests:         ~3 seconds   (58 tests)
 ├── Integration Tests: ~25 seconds  (20 tests, with mock)
-├── E2E Tests:         ~15-30 min   (8 tests, browser automation)
 └── Full Suite:        ~40 seconds  (when RUN_INTEGRATION=0)
 
 With Real ERPNext:
-├── Integration Tests: ~2-3 minutes (slower with real API calls)
-└── E2E Tests:         ~30-60 min   (depends on browser speed)
+└── Integration Tests: ~2-3 minutes (slower with real API calls)
 ```
 
 ---
@@ -330,8 +300,7 @@ With Real ERPNext:
 1. ✅ **Unit Tests** - Review and extend as needed
 2. ✅ **API Tests** - All endpoints covered
 3. ✅ **Integration Tests** - Configured with mock data
-4. 🔲 **E2E Tests** - Ready for implementation
-5. 📈 **Performance Tests** - Consider for future
+4.  **Performance Tests** - Consider for future
 
 ---
 
