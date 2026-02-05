@@ -186,9 +186,7 @@ class TestPromiseCalculationWithCalendar:
         promise_service._get_today = lambda tz: thursday
 
         try:
-            result = promise_service.calculate_promise(
-                customer="Test Customer", items=items, rules=rules
-            )
+            promise_service.calculate_promise(customer="Test Customer", items=items, rules=rules)
 
             # Thursday + 1 working day processing = Sunday (skip Fri/Sat)
             # But we have shortage, so it defaults to base date

@@ -79,7 +79,7 @@ class ApplyService:
 
                     # Also set confidence if field exists
                     try:
-                        conf_response = self.client.update_sales_order_custom_field(
+                        self.client.update_sales_order_custom_field(
                             sales_order_id, "custom_otp_confidence", confidence
                         )
                         actions_taken.append(
@@ -91,7 +91,7 @@ class ApplyService:
                 except ERPNextClientError as e:
                     logger.warning(f"Failed to set custom field: {e}")
                     actions_taken.append(
-                        f"Custom field not available (may need to create it in ERPNext)"
+                        "Custom field not available (may need to create it in ERPNext)"
                     )
 
             return ApplyPromiseResponse(

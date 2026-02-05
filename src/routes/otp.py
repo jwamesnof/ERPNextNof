@@ -13,7 +13,6 @@ from src.models.response_models import (
     ApplyPromiseResponse,
     ProcurementSuggestionResponse,
     HealthResponse,
-    SalesOrderSummary,
     SalesOrderItem,
     SalesOrderDetailsResponse,
     SalesOrderDetailItem,
@@ -159,7 +158,7 @@ async def health_check() -> HealthResponse:
             # Attempt to call a simple API method
             client.get_stock_balance("*", None)
             erpnext_connected = True
-        except:
+        except Exception:
             pass
 
         return HealthResponse(

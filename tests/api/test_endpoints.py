@@ -4,7 +4,6 @@ from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
 from src.main import app
 from src.clients.erpnext_client import ERPNextClientError
-from src.models.request_models import PromiseRequest, ItemRequest, PromiseRules
 
 pytestmark = pytest.mark.api
 

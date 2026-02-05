@@ -1,7 +1,7 @@
 """Unit tests for promise service (core algorithm)."""
 import pytest
-from datetime import date, timedelta
-from unittest.mock import Mock, patch
+from datetime import timedelta
+from unittest.mock import patch
 from src.services.promise_service import PromiseService
 from src.services.stock_service import StockService
 from src.models.request_models import ItemRequest, PromiseRules
@@ -154,8 +154,6 @@ class TestPromiseService:
     def test_skip_weekends(self, mock_erpnext_client):
         """Test: Promise date adjusted to skip weekends."""
         # Setup: Promise falls on Saturday (2026-01-31 is Saturday)
-        saturday = date(2026, 1, 31)
-
         mock_erpnext_client.get_bin_details.return_value = {
             "actual_qty": 10.0,
             "reserved_qty": 0.0,
@@ -237,7 +235,6 @@ class TestPromiseService:
 
         stock_service = StockService(mock_erpnext_client)
         # Mock get_incoming_supply to return access_error
-        from unittest.mock import patch
 
         with patch.object(
             stock_service,
@@ -376,7 +373,7 @@ class TestPromiseService:
 
         # Promise should be adjusted to desired date
         assert response.promise_date == today + timedelta(days=10)
-        assert response.adjusted_due_to_no_early_delivery == True
+        assert response.adjusted_due_to_no_early_delivery
 
     def test_warehouse_needs_processing(self, mock_erpnext_client, today):
         """Test: Warehouse classified as NEEDS_PROCESSING adds extra day."""
@@ -391,7 +388,6 @@ class TestPromiseService:
         promise_service = PromiseService(stock_service)
 
         # Use a warehouse that gets classified as NEEDS_PROCESSING
-        from unittest.mock import patch
         from src.utils.warehouse_utils import WarehouseType
 
         with patch.object(
@@ -423,7 +419,6 @@ class TestPromiseService:
         stock_service = StockService(mock_erpnext_client)
         promise_service = PromiseService(stock_service)
 
-        from unittest.mock import patch
         from src.utils.warehouse_utils import WarehouseType
 
         with patch.object(

@@ -1,6 +1,6 @@
 """Tests for items endpoint (GET /api/items/stock)."""
 import pytest
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
 from src.main import app
 from src.clients.erpnext_client import ERPNextClientError

@@ -1,6 +1,6 @@
 """Unit tests for ApplyService."""
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from datetime import date
 from src.services.apply_service import ApplyService
 from src.clients.erpnext_client import ERPNextClientError

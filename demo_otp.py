@@ -1,8 +1,6 @@
 """Quick demo script to test OTP functionality."""
 import sys
-import json
-from datetime import date
-from src.models.request_models import ItemRequest, PromiseRequest, PromiseRules
+from src.models.request_models import ItemRequest
 from src.services.promise_service import PromiseService
 from src.services.mock_supply_service import MockSupplyService
 from src.config import settings

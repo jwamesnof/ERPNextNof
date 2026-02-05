@@ -1,8 +1,7 @@
 """Integration tests for GET /otp/sales-orders endpoint."""
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, MagicMock, call
-import json
+from unittest.mock import patch, MagicMock
 from src.main import app
 
 pytestmark = pytest.mark.api
@@ -86,7 +85,7 @@ def test_erpnext_client_does_not_send_doctype_twice():
         mock_instance._handle_response = lambda x: []
         mock_instance.get_sales_order_list.return_value = []
 
-        response = client.get("/otp/sales-orders?limit=10&customer=ABC")
+        client.get("/otp/sales-orders?limit=10&customer=ABC")
 
         # Verify the endpoint call happened
         mock_instance.get_sales_order_list.assert_called_once()

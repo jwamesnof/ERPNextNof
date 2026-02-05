@@ -1,7 +1,7 @@
 """Unit tests for ERPNextClient HTTP client with error handling."""
 import pytest
 import httpx
-from unittest.mock import MagicMock, patch, Mock
+from unittest.mock import MagicMock, patch
 from src.clients.erpnext_client import ERPNextClient, ERPNextClientError
 
 pytestmark = pytest.mark.unit

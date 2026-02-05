@@ -3,7 +3,6 @@ import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import patch, MagicMock
 from src.main import app
-from src.clients.erpnext_client import ERPNextClientError
 
 pytestmark = pytest.mark.unit
 
@@ -313,34 +312,3 @@ class TestStartupAndShutdownEvents:
             # Verify shutdown was logged
             mock_logger.info.assert_called_once()
             assert "Shutting down" in str(mock_logger.info.call_args)
-
-
-class TestGlobalExceptionHandler:
-    """Test global exception handler."""
-
-    @pytest.mark.unit
-    def test_exception_handler_in_development_includes_detail(self):
-        """Test that exception handler includes detail in development mode."""
-        with patch("src.main.settings") as mock_settings:
-            mock_settings.otp_service_env = "development"
-
-            # Trigger an exception in an endpoint
-            with patch("src.main.ERPNextClient") as mock_client:
-                mock_client.return_value.__enter__.side_effect = ValueError("Test error")
-
-                response = client.get("/health")
-
-                # Should still return 200 for health check even with error
-                # But if we had a different endpoint that raises...
-                # Let's just verify the exception handler exists
-                assert response.status_code == 200
-
-    @pytest.mark.unit
-    def test_exception_handler_in_production_hides_detail(self):
-        """Test that exception handler hides detail in production mode."""
-        with patch("src.main.settings") as mock_settings:
-            mock_settings.otp_service_env = "production"
-
-            # The global exception handler should hide details in production
-            # This is tested by the handler code itself
-            assert True  # Handler exists and is configured

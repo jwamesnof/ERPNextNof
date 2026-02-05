@@ -4,8 +4,9 @@ from unittest.mock import MagicMock
 from datetime import date
 from src.services.stock_service import StockService
 
-pytestmark = pytest.mark.unit
 from src.clients.erpnext_client import ERPNextClientError
+
+pytestmark = pytest.mark.unit
 
 
 class TestStockServiceGetAvailableStock:

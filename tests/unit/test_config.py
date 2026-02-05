@@ -1,8 +1,5 @@
 """Unit tests for configuration management."""
 import pytest
-import os
-from unittest.mock import patch, MagicMock
-from pydantic import ValidationError
 
 pytestmark = pytest.mark.unit
 

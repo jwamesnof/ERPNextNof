@@ -1,15 +1,10 @@
 """Pytest configuration and fixtures for all tests."""
 import sys
-import os
 from pathlib import Path
-from datetime import datetime, date
-
-# Add project root to Python path so 'src' module can be imported
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
+from datetime import datetime
 
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 try:
     from unittest.mock import AsyncMock
@@ -18,7 +13,10 @@ except ImportError:
     from unittest.mock import MagicMock
 
     AsyncMock = MagicMock
-from src.config import settings
+
+# Add project root to Python path so 'src' module can be imported
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
 
 
 @pytest.fixture(scope="session")
@@ -28,7 +26,6 @@ def today():
     Uses UTC like the promise_service._get_today() method to avoid timezone mismatches.
     """
     import pytz
-    from datetime import datetime
 
     tz = pytz.timezone("UTC")
     return datetime.now(tz).date()
@@ -68,7 +65,6 @@ def mock_warehouse_manager():
 def sample_promise_request():
     """Fixture providing a sample promise request (module-scoped)."""
     from src.models.request_models import PromiseRequest, ItemRequest, PromiseRules, DesiredDateMode
-    from datetime import datetime
 
     return PromiseRequest(
         customer="CUST-001",
@@ -97,7 +93,6 @@ def sample_promise_response():
         FulfillmentSource,
         PromiseStatus,
     )
-    from datetime import datetime
 
     return PromiseResponse(
         status=PromiseStatus.OK,

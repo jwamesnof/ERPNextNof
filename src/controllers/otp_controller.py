@@ -1,5 +1,4 @@
 """Controllers for OTP API endpoints."""
-from typing import Dict, Any
 import logging
 from src.models.request_models import (
     PromiseRequest,

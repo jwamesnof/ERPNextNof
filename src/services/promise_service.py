@@ -397,11 +397,11 @@ class PromiseService:
                 if po_access_error == "permission_denied":
                     logger.warning(f"PO data access denied for {item.item_code}")
                     reasons.append(
-                        f"PO data unavailable due to permissions - cannot determine incoming supply"
+                        "PO data unavailable due to permissions - cannot determine incoming supply"
                     )
                 else:
                     logger.error(f"PO data access error for {item.item_code}: {po_access_error}")
-                    reasons.append(f"Error accessing PO data - supply timeline uncertain")
+                    reasons.append("Error accessing PO data - supply timeline uncertain")
             else:
                 # Process available POs
                 incoming_supply = incoming_result.get("supply", [])

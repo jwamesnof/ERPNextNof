@@ -1,5 +1,5 @@
 """Stock service for querying item availability."""
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 from datetime import date, datetime
 import logging
 from src.clients.erpnext_client import ERPNextClient, ERPNextClientError

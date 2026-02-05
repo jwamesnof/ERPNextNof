@@ -4,8 +4,8 @@ Verifies that OTP correctly handles different warehouse types to prevent
 false delivery promises.
 """
 import pytest
-from datetime import date, timedelta
-from src.utils.warehouse_utils import WarehouseManager, WarehouseType, default_warehouse_manager
+from datetime import date
+from src.utils.warehouse_utils import WarehouseManager, WarehouseType
 from src.services.promise_service import PromiseService
 from src.services.mock_supply_service import MockSupplyService
 from src.models.request_models import ItemRequest, PromiseRules

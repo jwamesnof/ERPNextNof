@@ -1,11 +1,9 @@
 """Unit tests for desired_date handling."""
 import pytest
-from datetime import date, timedelta
-from unittest.mock import Mock
+from datetime import timedelta
 from src.services.promise_service import PromiseService
 from src.services.stock_service import StockService
 from src.models.request_models import ItemRequest, PromiseRules, DesiredDateMode
-from src.models.response_models import PromiseResponse
 
 pytestmark = pytest.mark.unit
 
