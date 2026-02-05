@@ -152,8 +152,8 @@ class TestPromiseService:
         assert any("Shortage" in blocker for blocker in response.blockers)
 
     def test_skip_weekends(self, mock_erpnext_client):
-        """Test: Promise date adjusted to skip weekends."""
-        # Setup: Promise falls on Saturday (2026-01-31 is Saturday)
+        """Test: Promise date adjusted to skip weekends (Fri-Sat)."""
+        # Setup: Promise date should avoid Friday(4) and Saturday(5)
         mock_erpnext_client.get_bin_details.return_value = {
             "actual_qty": 10.0,
             "reserved_qty": 0.0,
@@ -164,16 +164,16 @@ class TestPromiseService:
         stock_service = StockService(mock_erpnext_client)
         promise_service = PromiseService(stock_service)
 
-        # Force base calculation to land on Saturday
+        # Force base calculation to land on weekend
         item = ItemRequest(item_code="ITEM-001", qty=10.0, warehouse="Stores - WH")
-        rules = PromiseRules(lead_time_buffer_days=0, no_weekends=True)  # No buffer
+        rules = PromiseRules(lead_time_buffer_days=0, no_weekends=True)
 
-        # Mock _get_today to return Friday (so Saturday after buffer would be tested)
-        # This is a simplified test - in reality would need more complex date mocking
         response = promise_service.calculate_promise(customer="CUST-001", items=[item], rules=rules)
 
-        # Weekend should be skipped
-        assert response.promise_date.weekday() < 5  # Not Saturday(5) or Sunday(6)
+        # Weekend should be skipped (not Friday or Saturday)
+        # Working days are Sun(6), Mon(0), Tue(1), Wed(2), Thu(3)
+        # Weekend days are Fri(4), Sat(5)
+        assert response.promise_date.weekday() not in (4, 5)
 
     def test_multi_item_promise(self, mock_erpnext_client, today):
         """Test: Multiple items, promise is max of all item dates."""
