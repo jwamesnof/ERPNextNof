@@ -194,7 +194,7 @@ class PromiseService:
         for item in items:
             warehouse = item.warehouse or settings.default_warehouse
             item_plan, po_access_error, item_reasons = self._build_item_plan(
-                item, warehouse, base_today, rules
+                item, warehouse, base_today, rules, today
             )
             plan.append(item_plan)
             all_item_reasons.extend(item_reasons)
@@ -280,10 +280,15 @@ class PromiseService:
         )
 
     def _build_item_plan(
-        self, item: ItemRequest, warehouse: str, today: date, rules: PromiseRules = None
-    ) -> ItemPlan:
+        self,
+        item: ItemRequest,
+        warehouse: str,
+        today: date,
+        rules: PromiseRules = None,
+        original_today: date = None,
+    ) -> tuple:
         """
-        Build fulfillment plan for a single item.
+        Build fulfillment plan for a single item. Note: Pass original_today for PO filtering.
 
         Strategy:
         1. Classify warehouse and handle accordingly
@@ -295,6 +300,8 @@ class PromiseService:
         """
         if rules is None:
             rules = PromiseRules()
+        
+        filter_date = original_today if original_today else today
 
         qty_needed = item.qty
         fulfillment = []
@@ -388,7 +395,7 @@ class PromiseService:
         po_access_error = None
         if qty_needed > 0:
             incoming_result = self.stock_service.get_incoming_supply(
-                item.item_code, after_date=today
+                item.item_code, after_date=filter_date
             )
 
             # Check for access errors (permission denied)
