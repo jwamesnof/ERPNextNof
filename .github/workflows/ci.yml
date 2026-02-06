@@ -5,12 +5,7 @@ on:
     branches: [main, develop]
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-  pull-requests: write
-  checks: write
-
+  contents: write
 jobs:
   unit-api-tests:
     name: Unit + API Tests + Coverage
