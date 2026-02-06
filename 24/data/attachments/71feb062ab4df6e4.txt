@@ -1,0 +1,1 @@
+ERROR    src.clients.erpnext_client:erpnext_client.py:74 Unexpected error: Invalid JSON

@@ -1,0 +1,1 @@
+ERROR    src.services.stock_service:stock_service.py:56 Failed to get stock for ITEM-001: Connection error

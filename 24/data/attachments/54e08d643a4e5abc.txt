@@ -1,0 +1,1 @@
+ERROR    src.clients.erpnext_client:erpnext_client.py:336 ERPNext health check failed: Connection failed

@@ -1,0 +1,1 @@
+ERROR    src.services.apply_service:apply_service.py:160 Failed to create procurement suggestion: Permission denied
