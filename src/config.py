@@ -28,7 +28,12 @@ class Settings(BaseSettings):
     cutoff_time: str = "14:00"
     timezone: str = "UTC"
     lead_time_buffer_days: int = 1
+    processing_lead_time_days_default: int = 1
     delivery_model: str = "latest_acceptable"
+
+    # Mock Supply Configuration (for testing/demo)
+    use_mock_supply: bool = False
+    mock_data_file: str = "data/mock_supply.json"
 
     class Config:
         env_file = ".env"

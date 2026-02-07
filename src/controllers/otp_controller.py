@@ -1,5 +1,4 @@
 """Controllers for OTP API endpoints."""
-from typing import Dict, Any
 import logging
 from src.models.request_models import (
     PromiseRequest,
@@ -40,8 +39,13 @@ class OTPController:
         )
 
         logger.info(
-            f"Promise calculated: {response.promise_date} "
-            f"(confidence: {response.confidence})"
+            f"Promise calculated: {response.promise_date} " f"(confidence: {response.confidence})"
+        )
+
+        # Debug log for desired_date fields
+        logger.info(
+            f"Response fields: desired_date={response.desired_date}, "
+            f"on_time={response.on_time}, mode={response.desired_date_mode}"
         )
 
         return response

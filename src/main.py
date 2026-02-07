@@ -3,7 +3,7 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from src.routes import otp
+from src.routes import otp, items
 from src.models.response_models import HealthResponse
 from src.clients.erpnext_client import ERPNextClient
 from src.config import settings
@@ -54,21 +54,32 @@ async def global_exception_handler(request: Request, exc: Exception):
 async def health_check():
     """
     Health check endpoint.
-    
+
     Verifies:
     - Service is running
     - ERPNext connection is working
+    - Circuit breaker status (for connection resilience)
     """
     erpnext_connected = False
     message = None
 
     try:
-        with ERPNextClient() as client:
-            erpnext_connected = client.health_check()
-            if erpnext_connected:
-                message = "All systems operational"
+        client = ERPNextClient()
+        erpnext_connected = client.health_check()
+        
+        # Get circuit breaker status
+        cb_status = ERPNextClient.get_circuit_breaker_status()
+        
+        if erpnext_connected:
+            if cb_status["state"] == "open":
+                message = "Connected but circuit breaker is protecting against cascading failures"
             else:
-                message = "ERPNext connection failed"
+                message = "All systems operational"
+        else:
+            message = "ERPNext connection failed"
+            
+        logger.info(f"Health check - Connected: {erpnext_connected}, CB State: {cb_status['state']}")
+            
     except Exception as e:
         logger.warning(f"Health check failed: {e}")
         message = f"ERPNext unreachable: {str(e)}"
@@ -83,6 +94,7 @@ async def health_check():
 
 # Include routers
 app.include_router(otp.router)
+app.include_router(items.router)
 
 
 # Startup event
@@ -92,8 +104,19 @@ async def startup_event():
     logger.info("Starting OTP Service...")
     logger.info(f"Environment: {settings.otp_service_env}")
     logger.info(f"ERPNext URL: {settings.erpnext_base_url}")
-    logger.info(f"API Documentation: http://{settings.otp_service_host}:{settings.otp_service_port}/docs")
-    
+    logger.info(
+        f"API Documentation: http://{settings.otp_service_host}:{settings.otp_service_port}/docs"
+    )
+
+    # Initialize global HTTP client connection pool
+    from src.clients.erpnext_client import get_global_client
+    try:
+        get_global_client()
+        logger.info("Global HTTP client initialized with connection pooling")
+        logger.info("Connection pool: max 100 connections, 50 keep-alive, 30s expiry")
+    except Exception as e:
+        logger.warning(f"Failed to initialize HTTP client: {e}")
+
     # Log all registered routes for debugging
     logger.info("\n=== Registered Routes ===")
     for route in app.routes:
@@ -108,9 +131,51 @@ async def startup_event():
 async def shutdown_event():
     """Application shutdown tasks."""
     logger.info("Shutting down OTP Service...")
+    # Close the global HTTP client to release connections
+    ERPNextClient.close_global_client()
 
 
-if __name__ == "__main__":
+# Diagnostics endpoint
+@app.get("/diagnostics")
+async def diagnostics():
+    """
+    Get connection diagnostics and circuit breaker status.
+    
+    Returns:
+        {
+            "circuit_breaker": {
+                "state": "closed" | "open" | "half_open",
+                "failure_count": int,
+                "threshold": int,
+                "last_failure_time": float | null
+            },
+            "http_client": {
+                "pooled": true,
+                "max_connections": 100,
+                "keep_alive_connections": 50,
+                "keep_alive_expiry": "30s"
+            }
+        }
+    """
+    cb_status = ERPNextClient.get_circuit_breaker_status()
+    
+    return {
+        "circuit_breaker": {
+            "state": cb_status["state"],
+            "failure_count": cb_status["failure_count"],
+            "threshold": cb_status["threshold"],
+            "last_failure_time": cb_status["last_failure_time"],
+        },
+        "http_client": {
+            "pooled": True,
+            "max_connections": 100,
+            "keep_alive_connections": 50,
+            "keep_alive_expiry": "30s",
+        },
+        "message": "Connection pooling and circuit breaker protection active"
+    }
+
+if __name__ == "__main__":  # pragma: no cover
     import uvicorn
 
     uvicorn.run(

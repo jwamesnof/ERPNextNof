@@ -1,0 +1,16 @@
+{
+  "customer": "Grant Plastics Ltd.",
+  "items": [
+    {
+      "item_code": "Item001",
+      "qty": 5,
+      "warehouse": "Stores - SD"
+    }
+  ],
+  "desired_date": "2026-02-10",
+  "rules": {
+    "no_weekends": false,
+    "lead_time_buffer_days": 0,
+    "desired_date_mode": "LATEST_ACCEPTABLE"
+  }
+}

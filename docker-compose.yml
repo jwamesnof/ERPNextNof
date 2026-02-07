@@ -25,7 +25,17 @@ services:
     networks:
       - erpnext-network
     depends_on:
-      - erpnext
+      erpnext:
+        condition: service_healthy
+    # Health check for automatic container restart
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Restart policy for better stability
+    restart: on-failure
     command: uvicorn src.main:app --host 0.0.0.0 --port 8001 --reload
 
   # Note: Assumes ERPNext is running separately on the host
@@ -37,6 +47,13 @@ services:
       - "8080:8000"
     networks:
       - erpnext-network
+    # Health check for ERPNext
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     # Add ERPNext configuration as needed
 
 networks:
