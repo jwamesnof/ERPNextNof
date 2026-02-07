@@ -1,1 +1,0 @@
-WARNING  src.main:main.py:73 Health check failed: Connection error

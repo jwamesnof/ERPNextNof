@@ -1,0 +1,1 @@
+ERROR    src.clients.erpnext_client:erpnext_client.py:511 ERPNext health check failed: '>=' not supported between instances of 'MagicMock' and 'int'

@@ -1,1 +1,0 @@
-ERROR    src.clients.erpnext_client:erpnext_client.py:68 HTTP error: 500 - Internal Server Error

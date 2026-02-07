@@ -1,0 +1,1 @@
+WARNING  src.clients.erpnext_client:erpnext_client.py:48 Circuit breaker opened after 5 failures

@@ -1,0 +1,2 @@
+ERROR    src.main:main.py:41 Unhandled exception: Test error
+NoneType: None

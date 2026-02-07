@@ -1,0 +1,1 @@
+WARNING  src.services.mock_supply_service:mock_supply_service.py:143 Skipping PO PO-004 for ITEM-BAD-DATE due to bad date: not-a-date
