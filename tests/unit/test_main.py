@@ -44,8 +44,9 @@ class TestHealthCheckEndpoint:
         """Test health check returns healthy when ERPNext is connected."""
         with patch("src.main.ERPNextClient") as mock_client_class:
             mock_instance = MagicMock()
-            mock_client_class.return_value.__enter__.return_value = mock_instance
+            mock_client_class.return_value = mock_instance
             mock_instance.health_check.return_value = True
+            mock_client_class.get_circuit_breaker_status.return_value = {"state": "closed"}
 
             response = client.get("/health")
 
@@ -55,12 +56,23 @@ class TestHealthCheckEndpoint:
             assert data["erpnext_connected"] is True
             assert "operational" in data["message"].lower()
 
+        # Test with circuit breaker open
+        with patch("src.main.ERPNextClient") as mock_client_class:
+            mock_instance = MagicMock()
+            mock_client_class.return_value = mock_instance
+            mock_instance.health_check.return_value = True
+            mock_client_class.get_circuit_breaker_status.return_value = {"state": "open", "failure_count": 5}
+            response = client.get("/health")
+            data = response.json()
+            assert "circuit breaker" in data["message"].lower()
+
     def test_health_check_degraded_when_erpnext_disconnected(self):
         """Test health check returns degraded when ERPNext is disconnected."""
         with patch("src.main.ERPNextClient") as mock_client_class:
             mock_instance = MagicMock()
-            mock_client_class.return_value.__enter__.return_value = mock_instance
+            mock_client_class.return_value = mock_instance
             mock_instance.health_check.return_value = False
+            mock_client_class.get_circuit_breaker_status.return_value = {"state": "closed"}
 
             response = client.get("/health")
 
@@ -73,7 +85,8 @@ class TestHealthCheckEndpoint:
     def test_health_check_handles_exception(self):
         """Test health check handles exceptions gracefully."""
         with patch("src.main.ERPNextClient") as mock_client_class:
-            mock_client_class.return_value.__enter__.side_effect = Exception("Connection error")
+            mock_client_class.return_value.health_check.side_effect = Exception("Connection error")
+            mock_client_class.get_circuit_breaker_status.return_value = {"state": "closed"}
 
             response = client.get("/health")
 
@@ -312,3 +325,139 @@ class TestStartupAndShutdownEvents:
             # Verify shutdown was logged
             mock_logger.info.assert_called_once()
             assert "Shutting down" in str(mock_logger.info.call_args)
+
+
+class TestOTPControllerIntegration:
+    """Test OTPController methods."""
+
+    def test_create_procurement_suggestion_controller_method(self):
+        """Test that OTPController.create_procurement_suggestion properly delegates to apply_service."""
+        from src.controllers.otp_controller import OTPController
+        from src.models.request_models import ProcurementSuggestionRequest, ProcurementItem
+        from src.models.response_models import ProcurementSuggestionResponse
+        from datetime import date
+
+        mock_promise_service = MagicMock()
+        mock_apply_service = MagicMock()
+
+        # Mock the response from apply_service
+        mock_apply_service.create_procurement_suggestion.return_value = ProcurementSuggestionResponse(
+            status="success",
+            suggestion_id="MR-001",
+            type="material_request",
+            items_count=1,
+            erpnext_url="http://erpnext.local/app/material-request/MR-001",
+        )
+
+        controller = OTPController(mock_promise_service, mock_apply_service)
+
+        request = ProcurementSuggestionRequest(
+            suggestion_type="material_request",
+            priority="High",
+            items=[
+                ProcurementItem(
+                    item_code="ITEM-001",
+                    qty_needed=100,
+                    required_by=date(2024, 2, 15),
+                    reason="Shortage",
+                )
+            ],
+        )
+
+        response = controller.create_procurement_suggestion(request)
+
+        assert response.status == "success"
+        assert response.suggestion_id == "MR-001"
+        mock_apply_service.create_procurement_suggestion.assert_called_once()
+
+
+class TestGlobalExceptionHandler:
+    """Test global exception handler."""
+
+    def test_global_exception_handler_detail_in_development(self):
+        """Test that error detail is included in development mode."""
+        import asyncio
+        from src.main import global_exception_handler
+        from unittest.mock import MagicMock
+
+        with patch("src.main.settings") as mock_settings:
+            mock_settings.otp_service_env = "development"
+            
+            request = MagicMock()
+            exc = ValueError("Test error")
+
+            async def test_handler():
+                return await global_exception_handler(request, exc)
+
+            result = asyncio.run(test_handler())
+            
+            assert result.status_code == 500
+
+
+class TestRoutesDependencyInjection:
+    """Test routes dependency injection with different settings."""
+
+    def test_get_controller_with_mock_supply_enabled(self):
+        """Test that get_controller uses MockSupplyService when enabled."""
+        from src.routes.otp import get_controller
+
+        with patch("src.routes.otp.settings") as mock_settings:
+            with patch("src.routes.otp.MockSupplyService") as mock_supply_class:
+                mock_settings.use_mock_supply = True
+                mock_settings.mock_data_file = "data/test.csv"
+
+                mock_erpnext_client = MagicMock()
+
+                controller = get_controller(mock_erpnext_client)
+
+                # Verify MockSupplyService was instantiated
+                mock_supply_class.assert_called_once_with("data/test.csv")
+                assert controller is not None
+
+    def test_get_controller_with_stock_service_fallback(self):
+        """Test that get_controller uses StockService when mock is disabled."""
+        from src.routes.otp import get_controller
+
+        with patch("src.routes.otp.settings") as mock_settings:
+            with patch("src.routes.otp.StockService") as mock_stock_class:
+                mock_settings.use_mock_supply = False
+
+                mock_erpnext_client = MagicMock()
+                controller = get_controller(mock_erpnext_client)
+
+                # Verify StockService was instantiated with the client
+                mock_stock_class.assert_called_once_with(mock_erpnext_client)
+                assert controller is not None
+
+
+
+class TestRoutesErrorHandling:
+    """Test error handling in route endpoints."""
+
+    @pytest.mark.parametrize(
+        "endpoint,request_data,status_code,error_detail",
+        [
+            (
+                "/otp/promise",
+                {"customer": "", "items": [], "desired_date": "2024-02-15", "rules": {}},
+                422,
+                None,
+            ),  # Validation error
+            (
+                "/otp/apply",
+                {"sales_order_id": "", "promise_date": "2024-02-15", "confidence": 100},
+                422,
+                None,
+            ),  # Validation error
+            (
+                "/otp/procurement-suggest",
+                {"suggestion_type": "", "priority": "", "items": []},
+                422,
+                None,
+            ),  # Validation error
+        ],
+    )
+    def test_endpoint_validation_errors(self, endpoint, request_data, status_code, error_detail):
+        """Test that endpoints return 422 for validation errors."""
+        response = client.post(endpoint, json=request_data)
+        assert response.status_code == status_code

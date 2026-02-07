@@ -16,35 +16,29 @@ pytestmark = pytest.mark.unit
 class TestWarehouseClassification:
     """Test warehouse classification logic."""
 
-    def test_sellable_warehouses(self):
-        """Stores-type warehouses should be SELLABLE."""
+    def test_warehouse_type_classifications(self):
+        """Test classification of different warehouse types."""
         wm = WarehouseManager()
+        
+        # SELLABLE warehouses (Stores-type)
         assert wm.classify_warehouse("Stores - SD") == WarehouseType.SELLABLE
         assert wm.classify_warehouse("Stores - WH") == WarehouseType.SELLABLE
         assert wm.classify_warehouse("Main Warehouse") == WarehouseType.SELLABLE
-
-    def test_needs_processing_warehouses(self):
-        """Finished Goods warehouses should be NEEDS_PROCESSING."""
-        wm = WarehouseManager()
+        
+        # NEEDS_PROCESSING warehouses (Finished Goods)
         assert wm.classify_warehouse("Finished Goods - SD") == WarehouseType.NEEDS_PROCESSING
         assert wm.classify_warehouse("Finished Goods - WH") == WarehouseType.NEEDS_PROCESSING
-
-    def test_in_transit_warehouses(self):
-        """Goods In Transit warehouses should be IN_TRANSIT."""
-        wm = WarehouseManager()
+        
+        # IN_TRANSIT warehouses
         assert wm.classify_warehouse("Goods In Transit - SD") == WarehouseType.IN_TRANSIT
         assert wm.classify_warehouse("Goods In Transit - WH") == WarehouseType.IN_TRANSIT
-
-    def test_not_available_warehouses(self):
-        """WIP and rejected warehouses should be NOT_AVAILABLE."""
-        wm = WarehouseManager()
+        
+        # NOT_AVAILABLE warehouses (WIP, Rejected, Scrap)
         assert wm.classify_warehouse("Work In Progress - SD") == WarehouseType.NOT_AVAILABLE
         assert wm.classify_warehouse("Rejected - SD") == WarehouseType.NOT_AVAILABLE
         assert wm.classify_warehouse("Scrap") == WarehouseType.NOT_AVAILABLE
-
-    def test_group_warehouses(self):
-        """All Warehouses should be GROUP."""
-        wm = WarehouseManager()
+        
+        # GROUP warehouses
         assert wm.classify_warehouse("All Warehouses - SD") == WarehouseType.GROUP
         assert wm.classify_warehouse("All Warehouses - WH") == WarehouseType.GROUP
 
@@ -61,7 +55,7 @@ class TestWarehouseClassification:
         assert wm.classify_warehouse("Custom Warehouse") == WarehouseType.SELLABLE
 
     def test_custom_classifications(self):
-        """Test custom warehouse classifications."""
+        """Test custom warehouse classifications and finished goods/scrap."""
         custom_classifications = {
             "custom stores": WarehouseType.SELLABLE,
             "custom transit": WarehouseType.IN_TRANSIT,
@@ -69,6 +63,12 @@ class TestWarehouseClassification:
         wm = WarehouseManager(custom_classifications=custom_classifications)
         assert wm.classify_warehouse("Custom Stores") == WarehouseType.SELLABLE
         assert wm.classify_warehouse("Custom Transit") == WarehouseType.IN_TRANSIT
+        
+        # Test finished goods and scrap/reject patterns
+        wm2 = WarehouseManager()
+        assert wm2.classify_warehouse("Finished Goods - Main") == WarehouseType.NEEDS_PROCESSING
+        assert wm2.classify_warehouse("Scrap Warehouse") == WarehouseType.NOT_AVAILABLE
+        assert wm2.classify_warehouse("Reject - Store") == WarehouseType.NOT_AVAILABLE
 
     def test_custom_hierarchy(self):
         """Test custom warehouse hierarchy."""
@@ -90,6 +90,9 @@ class TestWarehouseClassification:
         assert wm.classify_warehouse("Scrap Warehouse") == WarehouseType.NOT_AVAILABLE
         assert wm.classify_warehouse("Rejected Items") == WarehouseType.NOT_AVAILABLE
         assert wm.classify_warehouse("Reject Bin") == WarehouseType.NOT_AVAILABLE
+        # Test get_availability_reason for default case (unknown warehouse type treated as SELLABLE)
+        reason = wm.get_availability_reason("Custom Unknown WH", 10.0)
+        assert "10.0 units" in reason
 
 
 class TestWarehouseGroupExpansion:
@@ -168,33 +171,27 @@ class TestWarehouseGroupExpansion:
 class TestWarehouseAvailabilityReasons:
     """Test warehouse availability reason generation."""
 
-    def test_sellable_reason(self):
-        """SELLABLE warehouse reason."""
+    def test_warehouse_availability_reasons(self):
+        """Test availability reasons for all warehouse types."""
         wm = WarehouseManager()
+        
+        # SELLABLE warehouse reason
         reason = wm.get_availability_reason("Stores - SD", 100)
         assert "ready to ship" in reason.lower()
-
-    def test_needs_processing_reason(self):
-        """NEEDS_PROCESSING warehouse reason."""
-        wm = WarehouseManager()
+        
+        # NEEDS_PROCESSING warehouse reason
         reason = wm.get_availability_reason("Finished Goods - SD", 50)
         assert "processing" in reason.lower()
-
-    def test_in_transit_reason(self):
-        """IN_TRANSIT warehouse reason."""
-        wm = WarehouseManager()
+        
+        # IN_TRANSIT warehouse reason
         reason = wm.get_availability_reason("Goods In Transit - SD", 75)
         assert "not ship-ready" in reason.lower() or "awaiting receipt" in reason.lower()
-
-    def test_not_available_reason(self):
-        """NOT_AVAILABLE warehouse reason."""
-        wm = WarehouseManager()
+        
+        # NOT_AVAILABLE warehouse reason
         reason = wm.get_availability_reason("Work In Progress - SD", 30)
         assert "not available" in reason.lower()
-
-    def test_group_reason(self):
-        """GROUP warehouse reason."""
-        wm = WarehouseManager()
+        
+        # GROUP warehouse reason
         reason = wm.get_availability_reason("All Warehouses - SD", 100)
         assert "group warehouse" in reason.lower()
         assert "expand" in reason.lower()
@@ -333,7 +330,13 @@ class TestPromiseCalculationWithWarehouses:
             promise_service._get_today = original_get_today
 
     def test_reasons_explain_warehouse_decisions(self, promise_service):
-        """Reasons should explain warehouse-based decisions."""
+        """Reasons should explain warehouse-based decisions including GROUP warehouse handling."""
+        # Test GROUP warehouse reason
+        from src.utils.warehouse_utils import default_warehouse_manager
+        reason = default_warehouse_manager.get_availability_reason("All Warehouses - Group", 10)
+        assert "group" in reason.lower()
+        
+        # Now test with promise service
         today = date(2026, 1, 27)
 
         items = [ItemRequest(item_code="SKU004", qty=10, warehouse="Goods In Transit - SD")]

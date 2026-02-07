@@ -52,6 +52,22 @@ class TestStockServiceGetAvailableStock:
         assert result["actual_qty"] == 0.0
         assert result["available_qty"] == 0.0
 
+    def test_get_available_stock_no_warehouse_parameter(self):
+        """Test get_available_stock when no warehouse is specified."""
+        mock_client = MagicMock()
+        mock_client.get_stock_balance.return_value = {
+            "actual_qty": 50.0,
+            "reserved_qty": 5.0,
+            "available_qty": 45.0,
+        }
+
+        service = StockService(mock_client)
+        result = service.get_available_stock("ITEM-001", warehouse=None)
+
+        assert result["actual_qty"] == 50.0
+        assert result["available_qty"] == 45.0
+        mock_client.get_stock_balance.assert_called_once_with("ITEM-001", None)
+
 
 class TestStockServiceGetIncomingSupply:
     """Test get_incoming_supply method."""
@@ -260,3 +276,67 @@ class TestStockServiceEdgeCases:
         # Only the PO with a date should be included
         assert len(result["supply"]) == 1
         assert result["supply"][0]["po_id"] == "PO-WITH-DATE"
+
+    def test_filters_supply_by_after_date(self):
+        """Test that supply is filtered by after_date parameter."""
+        mock_client = MagicMock()
+        mock_client.get_incoming_purchase_orders.return_value = [
+            {
+                "po_id": "PO-EARLY",
+                "item_code": "ITEM-001",
+                "pending_qty": 10,
+                "schedule_date": "2026-02-05",
+                "warehouse": "WH-Main",
+            },
+            {
+                "po_id": "PO-LATE",
+                "item_code": "ITEM-001",
+                "pending_qty": 30,
+                "schedule_date": "2026-02-20",
+                "warehouse": "WH-Main",
+            },
+        ]
+
+        service = StockService(mock_client)
+        result = service.get_incoming_supply("ITEM-001", after_date=date(2026, 2, 10))
+
+        # Only the late PO should be included, early one filtered out
+        assert len(result["supply"]) == 1
+        assert result["supply"][0]["po_id"] == "PO-LATE"
+        # Verify PO-EARLY is NOT in results (filtered by after_date)
+        po_ids = [po["po_id"] for po in result["supply"]]
+        assert "PO-EARLY" not in po_ids
+
+    def test_handles_date_type_schedule_date(self):
+        """Test that schedule_date can be a date object and after_date filtering works."""
+        # Test with string schedule_date and after_date filter
+        mock_client1 = MagicMock()
+        mock_client1.get_incoming_purchase_orders.return_value = [
+            {"item_code": "ITEM-001", "pending_qty": 5, "schedule_date": "2024-01-10", "warehouse": "WH-Main", "po_id": "PO-001"},
+            {"item_code": "ITEM-001", "pending_qty": 3, "schedule_date": "2024-01-20", "warehouse": "WH-Main", "po_id": "PO-002"},
+        ]
+        mock_client1.get_bin_details.return_value = {"actual_qty": 0, "reserved_qty": 0, "projected_qty": 0}
+        service1 = StockService(mock_client1)
+        result1 = service1.get_incoming_supply("ITEM-001", after_date=date(2024, 1, 15))
+        # Should only get the 2024-01-20 PO
+        assert len(result1["supply"]) == 1
+        assert result1["supply"][0]["qty"] == 3
+        
+        # Test with date object schedule_date
+        mock_client = MagicMock()
+        schedule_date_obj = date(2026, 2, 15)
+        mock_client.get_incoming_purchase_orders.return_value = [
+            {
+                "po_id": "PO-DATE-OBJ",
+                "item_code": "ITEM-001",
+                "pending_qty": 20,
+                "schedule_date": schedule_date_obj,  # Pass as date object, not string
+                "warehouse": "WH-Main",
+            },
+        ]
+
+        service = StockService(mock_client)
+        result = service.get_incoming_supply("ITEM-001")
+
+        assert len(result["supply"]) == 1
+        assert result["supply"][0]["expected_date"] == schedule_date_obj

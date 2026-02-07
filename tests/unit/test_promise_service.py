@@ -154,6 +154,7 @@ class TestPromiseService:
     def test_skip_weekends(self, mock_erpnext_client):
         """Test: Promise date adjusted to skip weekends (Fri-Sat)."""
         # Setup: Promise date should avoid Friday(4) and Saturday(5)
+        rules = PromiseRules(lead_time_buffer_days=0, no_weekends=True)
         mock_erpnext_client.get_bin_details.return_value = {
             "actual_qty": 10.0,
             "reserved_qty": 0.0,
@@ -377,6 +378,20 @@ class TestPromiseService:
 
     def test_warehouse_needs_processing(self, mock_erpnext_client, today):
         """Test: Warehouse classified as NEEDS_PROCESSING adds extra day."""
+        # Test with None rules to hit default path
+        mock_erpnext_client.get_bin_details.return_value = {
+            "actual_qty": 10.0,
+            "reserved_qty": 0.0,
+            "projected_qty": 10.0,
+        }
+        mock_erpnext_client.get_incoming_purchase_orders.return_value = []
+        stock_service = StockService(mock_erpnext_client)
+        promise_service = PromiseService(stock_service)
+        item = ItemRequest(item_code="ITEM-001", qty=10.0, warehouse="Stores - WH")
+        response = promise_service.calculate_promise(customer="CUST-001", items=[item], rules=None)
+        assert response is not None
+
+        # Test NEEDS_PROCESSING warehouse type
         mock_erpnext_client.get_bin_details.return_value = {
             "actual_qty": 10.0,
             "reserved_qty": 0.0,

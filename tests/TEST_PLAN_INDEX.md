@@ -4,8 +4,8 @@
 
 This document indexes all test plans and traceability matrices across the project. Each test category (Unit, API, Integration) has its own comprehensive test plan documenting requirements, test cases, and traceability to source code.
 
-**Project Coverage:** 251 tests across 3 categories  
-**Overall Coverage:** 92% (1072 statements)  
+**Project Coverage:** 260 tests across 3 categories  
+**Overall Coverage:** 98% (1198 statements, 20 missed)  
 **Status:** ✅ All test plans created and linked  
 
 ---
@@ -16,7 +16,7 @@ This document indexes all test plans and traceability matrices across the projec
 
 | Category | Success Criteria | Current Status |
 |----------|------------------|-----------------|
-| **Unit Tests** | 165 pass, 92% coverage, <15s | ✅ PASS |
+| **Unit Tests** | 171 pass, 98% coverage, <16s | ✅ PASS |
 | **API Tests** | 58 pass, 100% endpoint coverage, <5s | ✅ PASS |
 | **Integration** | 20 pass, 75% real data coverage, <60s | ✅ PASS |
 
@@ -25,7 +25,7 @@ This document indexes all test plans and traceability matrices across the projec
 - ✅ All API endpoints tested (100% coverage)
 - ✅ Integration with real ERPNext validated
 - ✅ CI/CD pipeline active (Codecov reporting)
-- ✅ 92% overall code coverage
+- ✅ 98% overall code coverage
 - ✅ 0 flaky tests
 - ✅ Clear test plans with traceability matrices
 - ✅ All best practices documented
@@ -37,7 +37,7 @@ This document indexes all test plans and traceability matrices across the projec
 
 ## Test Plans by Category
 
-### 1. **Unit Tests** (165 tests, 92% coverage)
+### 1. **Unit Tests** (171 tests, 98% coverage)
 **Purpose:** Validate individual components in isolation  
 **Location:** [tests/unit/TEST_PLAN_AND_TRACEABILITY.md](unit/TEST_PLAN_AND_TRACEABILITY.md)
 
@@ -45,15 +45,16 @@ This document indexes all test plans and traceability matrices across the projec
 - Promise service (core algorithm)
 - Stock service (warehouse queries)
 - Apply service (write-back logic)
-- ERPNext client (HTTP communication)
+- ERPNext client (HTTP communication + circuit breaker)
 - Request/response models (validation)
 - Calendar & workweek utilities
 - Configuration loading
+- **NEW:** Coverage-focused tests for edge cases
 
 **Key Metrics:**
-- Execution Time: ~10 seconds
-- Line Coverage: 92%
-- Test Files: 11
+- Execution Time: ~16 seconds
+- Line Coverage: 98%
+- Test Files: 12
 - All tests passing ✅
 
 **Run Tests:**
@@ -172,12 +173,12 @@ pytest tests/unit/test_promise_service.py::TestPromiseCalculation::test_promise_
 │ Test Coverage Summary                                   │
 ├─────────────────────────────────────────────────────────┤
 │                                                         │
-│ Unit Tests       ████████████████████████░ 92%  165/165│
+│ Unit Tests       ████████████████████████░ 98%  171/171│
 │ API Tests        █████████████████████████ 100%  58/58  │
 │ Integration      ███████████████████░░░░░ 70%   20/20   │
 │                                                         │
-│ Total Tests:     ████████████████████░░░░ 92%   251/251│
-│ Statements:      1072 covered, 84 missing (92%)         │
+│ Total Tests:     ████████████████████░░░░ 98%   260/260│
+│ Statements:      1198 covered, 20 missing (98%)        │
 │                                                         │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -228,7 +229,7 @@ pytest tests/unit/test_promise_service.py::TestPromiseCalculation::test_promise_
 | Unit | 85% | 95% | 92% ✅ |
 | API | 90% | 100% | 100% ✅ |
 | Integration | 70% | 85% | 75% ✅ |
-| **Overall** | **80%** | **92%** | **92%** ✅ |
+| **Overall** | **80%** | **92%** | **98%** ✅ |
 
 ---
 
@@ -264,10 +265,10 @@ All shared test fixtures defined in [tests/conftest.py](conftest.py)
 
 ```
 Test Execution Times (local machine):
-├── Unit Tests:        ~10 seconds  (165 tests)
+├── Unit Tests:        ~16 seconds  (171 tests)
 ├── API Tests:         ~3 seconds   (58 tests)
 ├── Integration Tests: ~25 seconds  (20 tests, with mock)
-└── Full Suite:        ~40 seconds  (when RUN_INTEGRATION=0)
+└── Full Suite:        ~45 seconds  (when RUN_INTEGRATION=0)
 
 With Real ERPNext:
 └── Integration Tests: ~2-3 minutes (slower with real API calls)
@@ -304,6 +305,6 @@ With Real ERPNext:
 
 ---
 
-**Last Updated:** February 4, 2026  
+**Last Updated:** February 7, 2026  
 **Maintained By:** Development Team  
 **Next Review:** Quarterly

@@ -5,6 +5,13 @@ from datetime import datetime
 import json
 import logging
 from src.config import settings
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+)
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -15,12 +22,85 @@ class ERPNextClientError(Exception):
     pass
 
 
+class CircuitBreaker:
+    """Simple circuit breaker pattern for preventing cascading failures."""
+
+    def __init__(self, failure_threshold: int = 5, timeout: int = 60):
+        """
+        Initialize circuit breaker.
+
+        Args:
+            failure_threshold: Number of failures before opening circuit
+            timeout: Seconds to wait before attempting recovery
+        """
+        self.failure_threshold = failure_threshold
+        self.timeout = timeout
+        self.failure_count = 0
+        self.last_failure_time = None
+        self.state = "closed"  # closed, open, half_open
+
+    def record_failure(self):
+        """Record a failed request."""
+        self.failure_count += 1
+        self.last_failure_time = time.time()
+        if self.failure_count >= self.failure_threshold:
+            self.state = "open"
+            logger.warning(f"Circuit breaker opened after {self.failure_count} failures")
+
+    def record_success(self):
+        """Record a successful request."""
+        self.failure_count = 0
+        self.state = "closed"
+
+    def is_open(self) -> bool:
+        """Check if circuit is open."""
+        if self.state == "closed":
+            return False
+
+        if self.state == "open":
+            # Check if timeout has passed
+            if self.last_failure_time and time.time() - self.last_failure_time > self.timeout:
+                self.state = "half_open"
+                self.failure_count = 0
+                logger.info("Circuit breaker half-open, attempting recovery")
+                return False
+            return True
+
+        return False
+
+
+# Global HTTP client with connection pooling
+_global_client = None
+_circuit_breaker = CircuitBreaker(failure_threshold=5, timeout=60)
+
+
+def get_global_client() -> httpx.Client:
+    """Get or initialize global HTTP client with connection pooling."""
+    global _global_client
+    if _global_client is None:
+        limits = httpx.Limits(
+            max_keepalive_connections=50,
+            max_connections=100,
+            keepalive_expiry=30.0,
+        )
+        _global_client = httpx.Client(
+            limits=limits,
+            timeout=httpx.Timeout(30.0, connect=10.0, read=30.0, write=10.0),
+            http2=False,  # Ensure HTTP/1.1 for better compatibility
+        )
+        logger.info("Global HTTP client initialized with connection pooling")
+    return _global_client
+
+
 class ERPNextClient:
     """
     HTTP client for ERPNext REST API.
 
     Handles authentication, error handling, and provides typed methods
     for common ERPNext operations needed by OTP service.
+
+    Uses global connection pooling for stability and reuses connections.
+    Includes retry logic with exponential backoff and circuit breaker pattern.
     """
 
     def __init__(
@@ -36,20 +116,75 @@ class ERPNextClient:
         self.api_secret = api_secret or settings.erpnext_api_secret
         self.timeout = timeout
 
-        # Create httpx client with auth headers
-        self.client = httpx.Client(
-            base_url=self.base_url,
-            headers={
-                "Authorization": f"token {self.api_key}:{self.api_secret}",
-                "Content-Type": "application/json",
-            },
-            timeout=timeout,
-        )
+        # Use global client instead of creating new ones
+        self.client = get_global_client()
+        self.auth_header = f"token {self.api_key}:{self.api_secret}"
+
+    def _get_headers(self) -> Dict[str, str]:
+        """Get request headers with authentication."""
+        return {
+            "Authorization": self.auth_header,
+            "Content-Type": "application/json",
+        }
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=1, max=10),
+        retry=retry_if_exception_type((httpx.ReadTimeout, httpx.ConnectError, httpx.NetworkError)),
+        before_sleep=lambda retry_state: logger.warning(
+            f"Retrying request (attempt {retry_state.attempt_number})..."
+        ),
+    )
+    def _make_request(
+        self,
+        method: str,
+        url: str,
+        **kwargs,
+    ) -> httpx.Response:
+        """
+        Make an HTTP request with retry logic.
+
+        Args:
+            method: HTTP method (GET, POST, PUT, DELETE)
+            url: Full URL or relative path
+            **kwargs: Additional arguments for httpx request
+
+        Raises:
+            ERPNextClientError: On all errors after retries exhausted
+        """
+        # Check circuit breaker
+        if _circuit_breaker.is_open():
+            raise ERPNextClientError("Circuit breaker is open - service temporarily unavailable")
+
+        try:
+            # Ensure headers are set
+            if "headers" not in kwargs:
+                kwargs["headers"] = {}
+            kwargs["headers"].update(self._get_headers())
+
+            # Make request
+            response = self.client.request(method, url, **kwargs)
+            
+            # Check for HTTP errors (4xx and 5xx)
+            if response.status_code >= 400:
+                response.raise_for_status()
+            else:
+                _circuit_breaker.record_success()
+            
+            return response
+
+        except (httpx.ReadTimeout, httpx.ConnectError, httpx.NetworkError) as e:
+            _circuit_breaker.record_failure()
+            logger.error(f"Network error: {e}")
+            raise
+        except httpx.HTTPStatusError as e:
+            _circuit_breaker.record_failure()
+            logger.error(f"HTTP error: {e.response.status_code} - {e.response.text}")
+            raise ERPNextClientError(f"HTTP {e.response.status_code}: {e.response.text}") from e
 
     def _handle_response(self, response: httpx.Response) -> Dict[str, Any]:
         """Handle HTTP response and errors."""
         try:
-            response.raise_for_status()
             data = response.json()
 
             # ERPNext wraps responses in different ways
@@ -64,6 +199,8 @@ class ERPNextClient:
 
             return data
 
+        except ERPNextClientError:
+            raise
         except httpx.HTTPStatusError as e:
             logger.error(f"HTTP error: {e.response.status_code} - {e.response.text}")
             raise ERPNextClientError(f"HTTP {e.response.status_code}: {e.response.text}") from e
@@ -91,7 +228,8 @@ class ERPNextClient:
         if warehouse:
             params["warehouse"] = warehouse
 
-        response = self.client.get("/api/method/erpnext.stock.get_item_details", params=params)
+        url = f"{self.base_url}/api/method/erpnext.stock.get_item_details"
+        response = self._make_request("GET", url, params=params)
         return self._handle_response(response)
 
     def get_bin_details(self, item_code: str, warehouse: str) -> Dict[str, Any]:
@@ -105,7 +243,8 @@ class ERPNextClient:
             "fields": json.dumps(["actual_qty", "reserved_qty", "projected_qty", "warehouse"]),
         }
 
-        response = self.client.get("/api/resource/Bin", params=params)
+        url = f"{self.base_url}/api/resource/Bin"
+        response = self._make_request("GET", url, params=params)
         data = self._handle_response(response)
 
         # ERPNext returns data wrapped in a 'data' key
@@ -127,6 +266,35 @@ class ERPNextClient:
             "reserved_qty": 0.0,
             "projected_qty": 0.0,
         }
+
+    def get_value(
+        self,
+        doctype: str,
+        filters: Dict[str, str] = None,
+        fieldname: List[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Get a single document value from ERPNext."""
+        params: Dict[str, Any] = {}
+        if filters:
+            params["filters"] = json.dumps(filters)
+        if fieldname:
+            params["fields"] = json.dumps(fieldname)
+        url = f"{self.base_url}/api/resource/{doctype}"
+        try:
+            response = self._make_request("GET", url, params=params)
+            data = self._handle_response(response)
+            if isinstance(data, dict) and "data" in data:
+                result_list = data["data"]
+            elif isinstance(data, list):
+                result_list = data
+            else:
+                return None
+            if result_list and len(result_list) > 0:
+                return result_list[0]
+            return None
+        except Exception as e:
+            logger.error(f"Error fetching {doctype}: {e}")
+            raise
 
     def get_incoming_purchase_orders(self, item_code: str) -> List[Dict[str, Any]]:
         """
@@ -164,7 +332,8 @@ class ERPNextClient:
             "limit_page_length": 500,
         }
 
-        response = self.client.get("/api/resource/Purchase Order Item", params=params)
+        url = f"{self.base_url}/api/resource/Purchase Order Item"
+        response = self._make_request("GET", url, params=params)
         items = self._handle_response(response)
 
         # Transform to our format
@@ -186,7 +355,8 @@ class ERPNextClient:
 
     def get_sales_order(self, sales_order_id: str) -> Dict[str, Any]:
         """Get Sales Order details."""
-        response = self.client.get(f"/api/resource/Sales Order/{sales_order_id}")
+        url = f"{self.base_url}/api/resource/Sales Order/{sales_order_id}"
+        response = self._make_request("GET", url)
         return self._handle_response(response)
 
     def get_sales_order_list(
@@ -258,7 +428,8 @@ class ERPNextClient:
                 [["name", "like", f"%{search}%"], ["customer", "like", f"%{search}%"]]
             )
 
-        response = self.client.get("/api/resource/Sales Order", params=params)
+        url = f"{self.base_url}/api/resource/Sales Order"
+        response = self._make_request("GET", url, params=params)
         data = self._handle_response(response)
 
         # Resource API returns list directly or wrapped in "data"
@@ -275,7 +446,8 @@ class ERPNextClient:
             "comment_type": "Comment",
         }
 
-        response = self.client.post("/api/resource/Comment", json=data)
+        url = f"{self.base_url}/api/resource/Comment"
+        response = self._make_request("POST", url, json=data)
         return self._handle_response(response)
 
     def update_sales_order_custom_field(
@@ -284,7 +456,8 @@ class ERPNextClient:
         """Update a custom field on Sales Order."""
         data = {field_name: value}
 
-        response = self.client.put(f"/api/resource/Sales Order/{sales_order_id}", json=data)
+        url = f"{self.base_url}/api/resource/Sales Order/{sales_order_id}"
+        response = self._make_request("PUT", url, json=data)
         return self._handle_response(response)
 
     def create_material_request(
@@ -317,7 +490,8 @@ class ERPNextClient:
             "items": mr_items,
         }
 
-        response = self.client.post("/api/resource/Material Request", json=data)
+        url = f"{self.base_url}/api/resource/Material Request"
+        response = self._make_request("POST", url, json=data)
         result = self._handle_response(response)
 
         # ERPNext returns the created doc
@@ -329,7 +503,8 @@ class ERPNextClient:
     def health_check(self) -> bool:
         """Check if ERPNext is reachable and authenticated."""
         try:
-            response = self.client.get("/api/method/frappe.auth.get_logged_user")
+            url = f"{self.base_url}/api/method/frappe.auth.get_logged_user"
+            response = self._make_request("GET", url)
             self._handle_response(response)
             return True
         except Exception as e:
@@ -337,13 +512,42 @@ class ERPNextClient:
             return False
 
     def close(self):
-        """Close the HTTP client."""
-        self.client.close()
+        """Close the HTTP client (not recommended - uses global connection pool)."""
+        # Don't close global client - it's shared
+        logger.info("ERPNextClient instance released (global client remains active)")
 
     def __enter__(self):
         """Context manager entry."""
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context manager exit."""
-        self.close()
+        """Context manager exit (doesn't close global client)."""
+        # Clean up if needed, but keep the global client open
+        pass
+
+    @staticmethod
+    def get_circuit_breaker_status() -> Dict[str, Any]:
+        """Get current circuit breaker status for monitoring."""
+        return {
+            "state": _circuit_breaker.state,
+            "failure_count": _circuit_breaker.failure_count,
+            "last_failure_time": _circuit_breaker.last_failure_time,
+            "threshold": _circuit_breaker.failure_threshold,
+        }
+
+    @staticmethod
+    def reset_circuit_breaker():
+        """Reset circuit breaker (useful for manual recovery)."""
+        _circuit_breaker.failure_count = 0
+        _circuit_breaker.state = "closed"
+        _circuit_breaker.last_failure_time = None
+        logger.info("Circuit breaker reset")
+
+    @staticmethod
+    def close_global_client():
+        """Close the global HTTP client (call during shutdown)."""
+        global _global_client
+        if _global_client is not None:
+            _global_client.close()
+            _global_client = None
+            logger.info("Global HTTP client closed")

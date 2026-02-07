@@ -40,15 +40,15 @@ def get_item_stock(
         # Query ERPNext Bin doctype for this item + warehouse combination
         # Bin doctype stores warehouse-wise stock data for each item
         try:
-            with ERPNextClient() as client:
-                bin_data = client.get_value(
-                    "Bin",
-                    filters={
-                        "item_code": item_code.strip(),
-                        "warehouse": warehouse.strip(),
-                    },
-                    fieldname=["actual_qty", "reserved_qty"],
-                )
+            client = ERPNextClient()
+            bin_data = client.get_value(
+                "Bin",
+                filters={
+                    "item_code": item_code.strip(),
+                    "warehouse": warehouse.strip(),
+                },
+                fieldname=["actual_qty", "reserved_qty"],
+            )
         except ERPNextClientError as e:
             logger.error(f"ERPNext error fetching stock for {item_code} in {warehouse}: {e}")
             if "404" in str(e) or "not found" in str(e).lower():

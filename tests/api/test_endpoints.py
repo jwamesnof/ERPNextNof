@@ -468,3 +468,4 @@ class TestOTPEndpointExceptionHandlers:
 
         # Clean up cache
         otp._sales_orders_cache.clear()
+

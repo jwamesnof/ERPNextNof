@@ -18,92 +18,78 @@ class TestCalendarUtilities:
             d += timedelta(days=1)
         return d
 
-    def test_is_working_day_sunday_to_thursday(self):
-        """Sunday through Thursday should be working days."""
-        # Pick a baseline date and compute target weekdays
-        base = date(2026, 1, 26)  # arbitrary baseline
+    def test_is_working_day(self):
+        """Test working day detection for Sunday-Thursday workweek."""
+        base = date(2026, 1, 26)
+        
+        # Sunday through Thursday should be working days
         sunday = self.find_next_weekday(base, 6)
         monday = self.find_next_weekday(base, 0)
         tuesday = self.find_next_weekday(base, 1)
         wednesday = self.find_next_weekday(base, 2)
         thursday = self.find_next_weekday(base, 3)
-
         assert PromiseService.is_working_day(sunday) is True
         assert PromiseService.is_working_day(monday) is True
         assert PromiseService.is_working_day(tuesday) is True
         assert PromiseService.is_working_day(wednesday) is True
         assert PromiseService.is_working_day(thursday) is True
-
-    def test_is_working_day_friday_saturday_weekend(self):
-        """Friday and Saturday should be weekend days."""
-        base = date(2026, 1, 26)
+        
+        # Friday and Saturday should be weekend days
         friday = self.find_next_weekday(base, 4)
         saturday = self.find_next_weekday(base, 5)
-
         assert PromiseService.is_working_day(friday) is False
         assert PromiseService.is_working_day(saturday) is False
 
-    def test_next_working_day_from_working_day(self):
-        """next_working_day should return same date if already working day."""
+    def test_next_working_day_scenarios(self):
+        """Test next_working_day from various starting days."""
         base = date(2026, 1, 26)
+        
+        # From working day returns same date
         monday = self.find_next_weekday(base, 0)
         thursday = self.find_next_weekday(base, 3)
-
         assert PromiseService.next_working_day(monday) == monday
         assert PromiseService.next_working_day(thursday) == thursday
-
-    def test_next_working_day_from_friday(self):
-        """next_working_day from Friday should return Sunday."""
-        base = date(2026, 1, 26)
+        
+        # From Friday should return Sunday
         friday = self.find_next_weekday(base, 4)
         sunday = self.find_next_weekday(friday, 6)
         assert PromiseService.next_working_day(friday) == sunday
-
-    def test_next_working_day_from_saturday(self):
-        """next_working_day from Saturday should return Sunday."""
-        base = date(2026, 1, 26)
+        
+        # From Saturday should return Sunday
         saturday = self.find_next_weekday(base, 5)
-        sunday = self.find_next_weekday(saturday, 6)
-        assert PromiseService.next_working_day(saturday) == sunday
+        sunday_from_sat = self.find_next_weekday(saturday, 6)
+        assert PromiseService.next_working_day(saturday) == sunday_from_sat
 
-    def test_add_working_days_zero(self):
-        """Adding zero working days should return same date."""
+    def test_add_working_days_scenarios(self):
+        """Test adding working days in various scenarios."""
         base = date(2026, 1, 26)
+        
+        # Adding zero working days returns same date
         thursday = self.find_next_weekday(base, 3)
         assert PromiseService.add_working_days(thursday, 0) == thursday
-
-    def test_add_working_days_within_week(self):
-        """Adding working days within same week."""
-        base = date(2026, 1, 26)
+        
+        # Adding working days within same week
         sunday = self.find_next_weekday(base, 6)
         thursday_after = self.find_next_weekday(sunday, 3)
         assert PromiseService.add_working_days(sunday, 4) == thursday_after
-
         monday = self.find_next_weekday(base, 0)
         wednesday = self.find_next_weekday(base, 2)
         assert PromiseService.add_working_days(monday, 2) == wednesday
-
-    def test_add_working_days_skip_weekend(self):
-        """Adding working days should skip Friday and Saturday."""
-        base = date(2026, 1, 26)
-        thursday = self.find_next_weekday(base, 3)
-        sunday = self.find_next_weekday(thursday, 6)
-        result = PromiseService.add_working_days(thursday, 1)
-        assert result == sunday
-
-        monday_after = self.find_next_weekday(thursday, 0)
-        result2 = PromiseService.add_working_days(thursday, 2)
+        
+        # Adding working days should skip Friday and Saturday
+        thursday2 = self.find_next_weekday(base, 3)
+        sunday2 = self.find_next_weekday(thursday2, 6)
+        result = PromiseService.add_working_days(thursday2, 1)
+        assert result == sunday2
+        monday_after = self.find_next_weekday(thursday2, 0)
+        result2 = PromiseService.add_working_days(thursday2, 2)
         assert result2 == monday_after
-
-    def test_add_working_days_multiple_weeks(self):
-        """Adding working days across multiple weeks."""
-        base = date(2026, 1, 26)
-        sunday1 = self.find_next_weekday(base, 6)
-        sunday2 = self.find_next_weekday(sunday1 + timedelta(days=1), 6)
-        assert PromiseService.add_working_days(sunday1, 5) == sunday2
-
+        
+        # Adding working days across multiple weeks
+        sunday3 = self.find_next_weekday(base, 6)
+        sunday4 = self.find_next_weekday(sunday3 + timedelta(days=1), 6)
+        assert PromiseService.add_working_days(sunday3, 5) == sunday4
         monday1 = self.find_next_weekday(base, 0)
-        # 10 working days = 2 full workweeks (5 days each) → Monday two weeks later
         monday2 = self.find_next_weekday(monday1 + timedelta(days=14), 0)
         assert PromiseService.add_working_days(monday1, 10) == monday2
 
@@ -256,31 +242,21 @@ class TestIncomingSupplyWeekendAdjustment:
     def promise_service(self, mock_supply):
         return PromiseService(mock_supply)
 
-    def test_po_arrival_on_friday_adjusted_to_sunday(self, promise_service):
-        """PO arriving on Friday should be treated as arriving on Sunday."""
-        # This test requires mocking incoming_supply with Friday date
-        # For now, we'll test the logic directly
-
+    def test_po_arrival_weekend_adjustment(self, promise_service):
+        """PO arriving on Friday or Saturday should be adjusted to Sunday."""
         base = date(2026, 1, 26)
+        
+        # Test Friday adjustment to Sunday
         friday = TestCalendarUtilities.find_next_weekday(base, 4)
-        sunday = TestCalendarUtilities.find_next_weekday(friday, 6)
-
-        # Test the calendar logic directly
+        sunday_from_fri = TestCalendarUtilities.find_next_weekday(friday, 6)
         assert PromiseService.is_working_day(friday) is False
-        assert PromiseService.next_working_day(friday) == sunday
-
-        # In actual promise calculation, if a PO has expected_date = Friday,
-        # it should be adjusted to Sunday
-        # This is verified in the implementation
-
-    def test_po_arrival_on_saturday_adjusted_to_sunday(self, promise_service):
-        """PO arriving on Saturday should be treated as arriving on Sunday."""
-        base = date(2026, 1, 26)
+        assert PromiseService.next_working_day(friday) == sunday_from_fri
+        
+        # Test Saturday adjustment to Sunday
         saturday = TestCalendarUtilities.find_next_weekday(base, 5)
-        sunday = TestCalendarUtilities.find_next_weekday(saturday, 6)
-
+        sunday_from_sat = TestCalendarUtilities.find_next_weekday(saturday, 6)
         assert PromiseService.is_working_day(saturday) is False
-        assert PromiseService.next_working_day(saturday) == sunday
+        assert PromiseService.next_working_day(saturday) == sunday_from_sat
 
 
 class TestCutoffRuleWithCalendar:
