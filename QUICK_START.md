@@ -21,6 +21,17 @@ pip install -r requirements.txt
 uvicorn src.main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
+## 🖥️ LOCAL: View Reports - allure
+
+```bash
+# Windows - Just double-click:
+run_tests.bat
+
+# Or from command line:
+python run_tests_with_report.py  # All tests - with allure report
+```
+
+
 **Docker Mode:**
 ```bash
 docker-compose up -d

@@ -440,13 +440,41 @@ pytest tests/unit/test_promise_service.py -v
 ### Test Reports
 
 **Allure Reports** (Interactive HTML):
+
+🎯 **Quick Start (Recommended):**
 ```bash
-# Generate Allure results
+# Windows
+run_tests.bat              # All tests + auto-open report
+run_tests.bat unit         # Unit tests only
+
+# Linux/Mac  
+./run_tests.sh             # All tests + auto-open report
+./run_tests.sh api         # API tests only
+
+# Cross-platform Python
+python run_tests_with_report.py  #All tests 
+
+# Specific test types
+python run_tests_with_report.py unit
+python run_tests_with_report.py api
+python run_tests_with_report.py integration
+```
+
+**Manual Generation:**
+```bash
+# Step 1: Generate Allure results
 pytest --alluredir=allure-results
 
-# Serve report
+# Step 2: Generate and serve report
 allure serve allure-results
 ```
+
+**GitHub Actions:**
+- 📊 Reports automatically generated on every PR
+- 🔗 View link posted in PR comments
+- 🌐 Hosted on GitHub Pages
+
+📚 **Full Guide**: [ALLURE_REPORTS_GUIDE.md](ALLURE_REPORTS_GUIDE.md)
 
 ---
 
