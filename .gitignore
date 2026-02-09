@@ -33,6 +33,8 @@ coverage.xml
 *.cover
 .hypothesis/
 allure-results/
+allure-report/
+
 
 # Playwright
 test-results/
@@ -51,6 +53,12 @@ playwright/.cache/
 
 # Logs
 *.log
+
+# Temporary test outputs
+*_output.txt
+*_check.txt
+*_verification.txt
+TEST_SUMMARY.txt
 
 # OS
 .DS_Store
