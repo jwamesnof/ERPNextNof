@@ -1,0 +1,4 @@
+item_code,warehouse,actual_qty,reserved_qty,projected_qty
+SKU004,Goods In Transit - SD,80,0,80
+SKU001,Work In Progress - SD,120,0,120
+SKU005,Stores - SD,90,0,90
