@@ -33,6 +33,7 @@ coverage.xml
 *.cover
 .hypothesis/
 allure-results/
+allure-report/
 
 # Playwright
 test-results/
