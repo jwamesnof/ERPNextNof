@@ -44,8 +44,6 @@ jobs:
           ERPNEXT_API_SECRET: test-api-secret
         run: |
           pytest tests/unit/ -v --cov=src --cov-report=xml --cov-report=term --alluredir=allure-results
-          allure generate allure-results -o allure-report
-          allure open allure-report
 
       - name: Run API tests
         env:
