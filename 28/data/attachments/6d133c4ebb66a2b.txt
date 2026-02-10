@@ -1,1 +1,0 @@
-WARNING  src.services.stock_service:stock_service.py:118 Permission denied accessing PO data for ITEM-001: Permission denied

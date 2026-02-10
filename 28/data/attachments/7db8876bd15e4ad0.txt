@@ -1,6 +1,0 @@
-ERROR    src.clients.erpnext_client:erpnext_client.py:178 Network error: [Errno 111] Connection refused
-WARNING  src.clients.erpnext_client:erpnext_client.py:134 Retrying request (attempt 1)...
-ERROR    src.clients.erpnext_client:erpnext_client.py:178 Network error: [Errno 111] Connection refused
-WARNING  src.clients.erpnext_client:erpnext_client.py:134 Retrying request (attempt 2)...
-ERROR    src.clients.erpnext_client:erpnext_client.py:178 Network error: [Errno 111] Connection refused
-ERROR    src.clients.erpnext_client:erpnext_client.py:511 ERPNext health check failed: RetryError[<Future at 0x7efcec3bccd0 state=finished raised ConnectError>]

@@ -1,2 +1,0 @@
-ERROR    src.clients.erpnext_client:erpnext_client.py:182 HTTP error: 500 - Internal Server Error
-ERROR    src.clients.erpnext_client:erpnext_client.py:182 HTTP error: 502 - Bad Gateway

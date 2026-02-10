@@ -1,0 +1,1 @@
+ERROR    src.services.stock_service:stock_service.py:119 Failed to get incoming supply for ITEM-001: Connection error

@@ -1,0 +1,3 @@
+ERROR    src.clients.erpnext_client:erpnext_client.py:201 Unexpected error: Invalid JSON
+ERROR    src.clients.erpnext_client:erpnext_client.py:198 Request timeout: Timeout occurred
+ERROR    src.clients.erpnext_client:erpnext_client.py:201 Unexpected error: Unexpected error
