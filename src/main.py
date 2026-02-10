@@ -108,14 +108,8 @@ async def startup_event():
         f"API Documentation: http://{settings.otp_service_host}:{settings.otp_service_port}/docs"
     )
 
-    # Initialize global HTTP client connection pool
-    from src.clients.erpnext_client import get_global_client
-    try:
-        get_global_client()
-        logger.info("Global HTTP client initialized with connection pooling")
-        logger.info("Connection pool: max 100 connections, 50 keep-alive, 30s expiry")
-    except Exception as e:
-        logger.warning(f"Failed to initialize HTTP client: {e}")
+    # No global HTTP client initialization needed; clients are now per-instance and thread-safe
+    logger.info("HTTP client is now per-instance and thread-safe; no global pool initialized.")
 
     # Log all registered routes for debugging
     logger.info("\n=== Registered Routes ===")
@@ -131,8 +125,8 @@ async def startup_event():
 async def shutdown_event():
     """Application shutdown tasks."""
     logger.info("Shutting down OTP Service...")
-    # Close the global HTTP client to release connections
-    ERPNextClient.close_global_client()
+    # No global HTTP client to close; clients are now per-instance
+    logger.info("No global HTTP client to close; clients are per-instance.")
 
 
 # Diagnostics endpoint

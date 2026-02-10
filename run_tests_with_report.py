@@ -39,20 +39,42 @@ def cleanup_old_results():
 def run_tests(test_type="all"):
     """Run pytest with Allure results collection."""
     print(f"[*] Running {test_type} tests...")
-    
+
     # Build pytest command
     if test_type == "all":
-        # Set environment variable for integration tests
         os.environ["RUN_INTEGRATION"] = "1"
-        cmd = ["pytest", "tests/unit/", "tests/api/", "tests/integration/", "-v", "--cov=src", "--cov-report=term", "--alluredir=allure-results"]
+        cmd = [
+            "pytest",
+            "tests/unit/",
+            "tests/api/",
+            "tests/integration/",
+            "-v",
+            "--cov=src",
+            "--cov-report=term",
+            "--alluredir=allure-results"
+        ]
     elif test_type == "unit":
-        cmd = ["pytest", "tests/unit/", "-v", "-m", "unit", "--alluredir=allure-results"]
+        cmd = [
+            "pytest",
+            "tests/unit/",
+            "-v",
+            "--alluredir=allure-results"
+        ]
     elif test_type == "api":
-        cmd = ["pytest", "tests/api/", "-v", "-m", "api", "--alluredir=allure-results"]
+        cmd = [
+            "pytest",
+            "tests/api/",
+            "-v",
+            "--alluredir=allure-results"
+        ]
     elif test_type == "integration":
-        cmd = ["pytest", "tests/integration/", "-v", "-m", "integration", "--alluredir=allure-results"]
-        # Set environment variable for integration tests
         os.environ["RUN_INTEGRATION"] = "1"
+        cmd = [
+            "pytest",
+            "tests/integration/",
+            "-v",
+            "--alluredir=allure-results"
+        ]
     else:
         print(f"❌ Unknown test type: {test_type}")
         print("   Valid options: all, unit, api, integration")

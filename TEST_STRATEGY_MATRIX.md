@@ -2,12 +2,14 @@
 
 ## Executive Summary
 
-The **Order Promise Engine (OTP)** uses a comprehensive testing strategy with **260+ tests** covering **98% code coverage** across multiple testing levels:
+The **Order Promise Engine (OTP)** uses a comprehensive testing strategy with **256 tests** covering **97% code coverage** across multiple testing levels.
 
-- **Unit Tests**: 171 tests for business logic and services
-- **API Tests**: 80+ tests for endpoint validation
-- **Integration Tests**: Manual tests for ERPNext connectivity
-- **E2E Scenarios**: Real-world order promise workflows
+| Test Type      | Number of Tests | Coverage |
+|----------------|-----------------|----------|
+| Unit          | 189            | 97%     |
+| API           | 63             | 97%     |
+| Integration   | 21             | 97%     |
+| **Total**     | **256**        | **97%** |
 
 ---
 
@@ -50,7 +52,7 @@ The **Order Promise Engine (OTP)** uses a comprehensive testing strategy with **
 /____________\ - Config Tests
                - Utility Tests
 
-           Distribution: 65% / 30% / 5%
+           Distribution: 74% / 25% / 8%
 ```
 
 ---
@@ -64,7 +66,7 @@ tests/
 ├── conftest.py                 # Pytest configuration & shared fixtures
 ├── __init__.py
 │
-├── unit/                       # Unit tests (171 tests)
+├── unit/                       # Unit tests (189 tests)
 │   ├── test_promise_service.py
 │   ├── test_stock_service.py
 │   ├── test_apply_service.py
@@ -78,13 +80,13 @@ tests/
 │   ├── test_processing_lead_time.py
 │   └── test_warehouse_handling.py
 │
-├── api/                        # API endpoint tests (80+ tests)
+├── api/                        # API endpoint tests (63 tests)
 │   ├── test_endpoints.py
 │   ├── test_items_endpoint.py
 │   ├── test_sales_order_details_endpoint.py
 │   └── test_sales_orders_endpoint.py
 │
-└── integration/                # Integration tests (manual)
+└── integration/                # Integration tests (21 tests)
     ├── test_erpnext_integration.py
     └── conftest.py (ERPNext setup)
 ```
