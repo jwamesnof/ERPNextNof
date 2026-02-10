@@ -61,7 +61,7 @@ class StockService:
         self, item_code: str, after_date: Optional[date] = None
     ) -> Dict[str, any]:
         """
-        Get incoming supply from purchase orders.
+        Get incoming supply from purchase orders (using parent PO doctype).
 
         Returns:
             {
@@ -82,18 +82,18 @@ class StockService:
             pos = self.client.get_incoming_purchase_orders(item_code)
 
             for po in pos:
-                # Parse schedule_date
                 schedule_date_str = po.get("schedule_date")
                 if schedule_date_str:
                     if isinstance(schedule_date_str, str):
-                        expected_date = datetime.strptime(schedule_date_str, "%Y-%m-%d").date()
+                        try:
+                            expected_date = datetime.strptime(schedule_date_str, "%Y-%m-%d").date()
+                        except Exception:
+                            expected_date = schedule_date_str
                     else:
                         expected_date = schedule_date_str
                 else:
-                    # Skip POs without schedule date
                     continue
 
-                # Filter by after_date if provided
                 if after_date and expected_date < after_date:
                     continue
 
@@ -106,12 +106,10 @@ class StockService:
                     }
                 )
 
-            # Sort by expected date
             result["supply"].sort(key=lambda x: x["expected_date"])
             return result
 
         except ERPNextClientError as e:
-            # Distinguish between permission error and other errors
             status_code = getattr(e, "status_code", None)
             if status_code == 403:
                 result["access_error"] = "permission_denied"

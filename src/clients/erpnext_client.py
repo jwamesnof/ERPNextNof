@@ -298,7 +298,7 @@ class ERPNextClient:
 
     def get_incoming_purchase_orders(self, item_code: str) -> List[Dict[str, Any]]:
         """
-        Get open purchase orders with expected delivery for an item.
+        Get open purchase orders with expected delivery for an item using parent Purchase Order doctype.
 
         Returns list of:
             {
@@ -307,50 +307,40 @@ class ERPNextClient:
                 "qty": 5.0,
                 "received_qty": 0.0,
                 "pending_qty": 5.0,
-                "schedule_date": "2026-02-03"
+                "schedule_date": "2026-02-03",
+                "warehouse": "Stores - WH"
             }
         """
         params = {
-            "filters": json.dumps(
-                [
-                    ["item_code", "=", item_code],
-                    ["docstatus", "=", 1],  # Submitted
-                    ["qty", ">", "received_qty"],  # Not fully received
-                ]
-            ),
-            "fields": json.dumps(
-                [
-                    "parent",
-                    "item_code",
-                    "qty",
-                    "received_qty",
-                    "schedule_date",
-                    "warehouse",
-                ]
-            ),
+            "filters": json.dumps([
+                ["docstatus", "=", 1],
+                ["status", "in", ["To Receive and Bill", "To Receive"]],
+            ]),
+            "fields": json.dumps(["name", "schedule_date", "items", "supplier", "status"]),
             "order_by": "schedule_date asc",
-            "limit_page_length": 500,
+            "limit_page_length": 100,
         }
-
-        url = f"{self.base_url}/api/resource/Purchase Order Item"
+        url = f"{self.base_url}/api/resource/Purchase Order"
         response = self._make_request("GET", url, params=params)
-        items = self._handle_response(response)
-
-        # Transform to our format
+        po_list = self._handle_response(response)
         result = []
-        for item in items if isinstance(items, list) else []:
-            result.append(
-                {
-                    "po_id": item.get("parent"),
-                    "item_code": item.get("item_code"),
-                    "qty": item.get("qty", 0),
-                    "received_qty": item.get("received_qty", 0),
-                    "pending_qty": item.get("qty", 0) - item.get("received_qty", 0),
-                    "schedule_date": item.get("schedule_date"),
-                    "warehouse": item.get("warehouse"),
-                }
-            )
-
+        for po in po_list if isinstance(po_list, list) else []:
+            # Fetch full PO doc if items not present
+            items = po.get("items")
+            if not items:
+                po_doc_resp = self._make_request("GET", f"{self.base_url}/api/resource/Purchase Order/{po['name']}")
+                items = self._handle_response(po_doc_resp).get("items", [])
+            for po_item in items:
+                if po_item.get("item_code") == item_code and po_item.get("qty", 0) > po_item.get("received_qty", 0):
+                    result.append({
+                        "po_id": po["name"],
+                        "item_code": po_item.get("item_code"),
+                        "qty": po_item.get("qty", 0),
+                        "received_qty": po_item.get("received_qty", 0),
+                        "pending_qty": po_item.get("qty", 0) - po_item.get("received_qty", 0),
+                        "schedule_date": po_item.get("schedule_date") or po.get("schedule_date"),
+                        "warehouse": po_item.get("warehouse"),
+                    })
         return result
 
     def get_sales_order(self, sales_order_id: str) -> Dict[str, Any]:

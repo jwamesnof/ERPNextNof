@@ -153,6 +153,62 @@ def step1_fetch_sales_order_details(so_id: str) -> Dict[Any, Any]:
         print(
             f"     {idx}. {item['item_code']:15s} | Qty: {item['qty']:6.1f} {item['uom']:5s} | Warehouse: {item['warehouse']}"
         )
+        # Fetch incoming POs for this item using parent Purchase Order
+        try:
+            po_response = requests.get(
+                f"{ERPNEXT_BASE_URL}/api/resource/Purchase Order",
+                params={
+                    "filters": json.dumps([
+                        ["docstatus", "=", 1],  # Submitted
+                        ["status", "in", ["To Receive and Bill", "To Receive"]],
+                    ]),
+                    "fields": json.dumps(["name", "schedule_date", "items", "supplier", "status"]),
+                    "order_by": "schedule_date asc",
+                    "limit_page_length": 100,
+                },
+                headers={"Authorization": f"token {ERPNEXT_API_KEY}:{ERPNEXT_API_SECRET}"},
+            )
+            if po_response.status_code == 200:
+                po_list = po_response.json().get("data", [])
+                # For each PO, check if it contains this item in its items table
+                matching_pos = []
+                for po in po_list:
+                    # Some ERPNext APIs may not return child tables by default; fetch full doc if needed
+                    if not po.get("items"):
+                        # Fetch full PO doc
+                        po_doc_resp = requests.get(
+                            f"{ERPNEXT_BASE_URL}/api/resource/Purchase Order/{po['name']}",
+                            headers={"Authorization": f"token {ERPNEXT_API_KEY}:{ERPNEXT_API_SECRET}"},
+                        )
+                        if po_doc_resp.status_code == 200:
+                            po["items"] = po_doc_resp.json().get("data", {}).get("items", [])
+                        else:
+                            po["items"] = []
+                    for po_item in po["items"]:
+                        if (
+                            po_item.get("item_code") == item["item_code"]
+                            and po_item.get("warehouse") == item["warehouse"]
+                            and po_item.get("qty", 0) > po_item.get("received_qty", 0)
+                        ):
+                            pending_qty = po_item["qty"] - po_item.get("received_qty", 0)
+                            matching_pos.append({
+                                "po_id": po["name"],
+                                "qty": po_item["qty"],
+                                "pending_qty": pending_qty,
+                                "expected": po_item.get("schedule_date") or po.get("schedule_date"),
+                                "supplier": po.get("supplier"),
+                                "status": po.get("status"),
+                            })
+                if matching_pos:
+                    print(f"        Incoming Purchase Orders:")
+                    for mpo in matching_pos:
+                        print(f"          - PO: {mpo['po_id']} | Qty: {mpo['qty']} | Pending: {mpo['pending_qty']} | Expected: {mpo['expected']}")
+                else:
+                    print(f"        No incoming POs found for this item.")
+            else:
+                print(f"        Could not fetch POs (HTTP {po_response.status_code})")
+        except Exception as e:
+            print(f"        Error fetching POs: {e}")
 
     print(f"\n   Defaults for Promise Calculation:")
     print(f"     - Warehouse: {so_details['defaults']['warehouse']}")
