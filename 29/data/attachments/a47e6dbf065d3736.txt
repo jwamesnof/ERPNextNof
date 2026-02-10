@@ -1,1 +1,0 @@
-ERROR    src.routes.otp:otp.py:106 ERPNext error: Failed to update SO

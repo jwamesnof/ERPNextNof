@@ -1,1 +1,0 @@
-ERROR    src.routes.otp:otp.py:79 ERPNext error: Connection failed

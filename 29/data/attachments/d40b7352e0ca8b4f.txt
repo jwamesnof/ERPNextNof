@@ -1,1 +1,0 @@
-WARNING  src.routes.otp:otp.py:305 Could not fetch stock for ITEM-001 in WH-Main: Stock unavailable

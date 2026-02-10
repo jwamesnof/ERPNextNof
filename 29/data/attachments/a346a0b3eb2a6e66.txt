@@ -1,1 +1,0 @@
-ERROR    src.routes.otp:otp.py:347 [OTP API] ERPNext error: HTTP 404: Not Found
