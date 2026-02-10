@@ -1,0 +1,16 @@
+{
+  "customer": "Grant Plastics Ltd.",
+  "items": [
+    {
+      "item_code": "SKU001",
+      "qty": 10,
+      "warehouse": "Goods In Transit - SD"
+    }
+  ],
+  "desired_date": "2026-02-05",
+  "rules": {
+    "no_weekends": false,
+    "lead_time_buffer_days": 0,
+    "desired_date_mode": "LATEST_ACCEPTABLE"
+  }
+}

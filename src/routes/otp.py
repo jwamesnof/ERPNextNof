@@ -13,7 +13,6 @@ from src.models.response_models import (
     ApplyPromiseResponse,
     ProcurementSuggestionResponse,
     HealthResponse,
-    SalesOrderSummary,
     SalesOrderItem,
     SalesOrderDetailsResponse,
     SalesOrderDetailItem,
@@ -22,6 +21,7 @@ from src.models.response_models import (
 from src.controllers.otp_controller import OTPController
 from src.services.promise_service import PromiseService
 from src.services.stock_service import StockService
+from src.services.mock_supply_service import MockSupplyService
 from src.services.apply_service import ApplyService
 from src.clients.erpnext_client import ERPNextClient, ERPNextClientError
 from src.config import settings
@@ -48,20 +48,23 @@ def get_erpnext_client() -> ERPNextClient:
 
 def get_controller(client: ERPNextClient = Depends(get_erpnext_client)) -> OTPController:
     """Dependency to get OTP controller with all services."""
-    stock_service = StockService(client)
+    if settings.use_mock_supply:
+        stock_service = MockSupplyService(settings.mock_data_file)
+    else:
+        stock_service = StockService(client)
     promise_service = PromiseService(stock_service)
     apply_service = ApplyService(client)
     return OTPController(promise_service, apply_service)
 
 
-@router.post("/promise", response_model=PromiseResponse)
+@router.post("/promise", response_model=PromiseResponse, response_model_exclude_none=False)
 async def calculate_promise(
     request: PromiseRequest,
     controller: OTPController = Depends(get_controller),
 ) -> PromiseResponse:
     """
     Calculate order promise date.
-    
+
     Given a draft order with items, returns:
     - promise_date: Earliest feasible delivery date
     - confidence: HIGH/MEDIUM/LOW
@@ -87,18 +90,18 @@ async def apply_promise(
 ) -> ApplyPromiseResponse:
     """
     Apply promise to a Sales Order in ERPNext.
-    
+
     Writes promise date back to ERPNext:
     - Adds comment to Sales Order
     - Updates custom fields (if configured)
     """
     try:
         response = controller.apply_promise(request)
-        
+
         # Return error status but not as HTTP exception
         # (client can handle based on response.status)
         return response
-        
+
     except ERPNextClientError as e:
         logger.error(f"ERPNext error: {e}")
         raise HTTPException(status_code=503, detail=f"ERPNext service error: {str(e)}")
@@ -114,7 +117,7 @@ async def create_procurement_suggestion(
 ) -> ProcurementSuggestionResponse:
     """
     Create procurement suggestion in ERPNext.
-    
+
     Creates:
     - Material Request for purchasing
     - (Future) Draft Purchase Order
@@ -123,7 +126,7 @@ async def create_procurement_suggestion(
     try:
         response = controller.create_procurement_suggestion(request)
         return response
-        
+
     except ERPNextClientError as e:
         logger.error(f"ERPNext error: {e}")
         raise HTTPException(status_code=503, detail=f"ERPNext service error: {str(e)}")
@@ -136,9 +139,17 @@ async def create_procurement_suggestion(
 async def health_check() -> HealthResponse:
     """
     Health check endpoint.
-    
+
     Returns service status and ERPNext connectivity.
     """
+    if settings.use_mock_supply:
+        return HealthResponse(
+            status="healthy",
+            version="0.1.0",
+            erpnext_connected=False,
+            message="OTP Service is operational (using mock supply data)",
+        )
+
     try:
         client = ERPNextClient()
         # Try a simple query to verify ERPNext connection
@@ -147,14 +158,14 @@ async def health_check() -> HealthResponse:
             # Attempt to call a simple API method
             client.get_stock_balance("*", None)
             erpnext_connected = True
-        except:
+        except Exception:
             pass
-        
+
         return HealthResponse(
             status="healthy",
             version="0.1.0",
             erpnext_connected=erpnext_connected,
-            message="OTP Service is operational"
+            message="OTP Service is operational",
         )
     except Exception as e:
         logger.error(f"Health check error: {e}")
@@ -162,7 +173,7 @@ async def health_check() -> HealthResponse:
             status="healthy",
             version="0.1.0",
             erpnext_connected=False,
-            message=f"Service running but ERPNext unavailable: {str(e)}"
+            message=f"Service running but ERPNext unavailable: {str(e)}",
         )
 
 
@@ -173,16 +184,20 @@ async def list_sales_orders(
     offset: int = Query(0, ge=0, description="Number of records to skip for pagination"),
     customer: Optional[str] = Query(None, description="Filter by customer name"),
     status: Optional[str] = Query(None, description="Filter by status (e.g., Draft, To Deliver)"),
-    from_date: Optional[str] = Query(None, description="Filter transaction_date >= this date (ISO format: YYYY-MM-DD)"),
-    to_date: Optional[str] = Query(None, description="Filter transaction_date <= this date (ISO format: YYYY-MM-DD)"),
+    from_date: Optional[str] = Query(
+        None, description="Filter transaction_date >= this date (ISO format: YYYY-MM-DD)"
+    ),
+    to_date: Optional[str] = Query(
+        None, description="Filter transaction_date <= this date (ISO format: YYYY-MM-DD)"
+    ),
     search: Optional[str] = Query(None, description="Search in Sales Order name or customer name"),
 ) -> List[SalesOrderItem]:
     """
     Get Sales Orders list from ERPNext for dropdown/list selection.
-    
+
     Returns a lightweight list of Sales Orders ordered by newest first.
     Suitable for frontend dropdowns and list components.
-    
+
     Query Parameters:
     - limit: Max results (1-100, default 20)
     - offset: Pagination offset (default 0)
@@ -191,7 +206,7 @@ async def list_sales_orders(
     - from_date: Start date filter for transaction_date (optional, ISO format)
     - to_date: End date filter for transaction_date (optional, ISO format)
     - search: Search in SO name or customer name (optional)
-    
+
     Returns:
     ```json
     [
@@ -205,7 +220,7 @@ async def list_sales_orders(
       }
     ]
     ```
-    
+
     Errors:
     - 502: ERPNext returned error (see detail field)
     - 500: Internal server error
@@ -222,7 +237,7 @@ async def list_sales_orders(
             f"[OTP API] Fetching sales orders: limit={limit}, offset={offset}, customer={customer}, "
             f"status={status}, from_date={from_date}, to_date={to_date}, search={search}"
         )
-        
+
         orders = client.get_sales_order_list(
             limit=limit,
             offset=offset,
@@ -250,17 +265,14 @@ async def list_sales_orders(
             "data": items,
             "expires_at": now + _SALES_ORDER_CACHE_TTL_SECONDS,
         }
-        
+
         logger.info(f"[OTP API] Retrieved {len(items)} sales orders")
         return items
 
     except ERPNextClientError as e:
         logger.error(f"[OTP API] ERPNext error: {e}")
         # Return 502 Bad Gateway - ERPNext service returned an error
-        raise HTTPException(
-            status_code=502, 
-            detail=f"ERPNext returned error: {str(e)}"
-        )
+        raise HTTPException(status_code=502, detail=f"ERPNext returned error: {str(e)}")
     except Exception as e:
         logger.error(f"[OTP API] Unexpected error fetching sales orders: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
@@ -281,13 +293,32 @@ async def get_sales_order_details(
 
         items = []
         for item in order.get("items") or []:
+            warehouse = item.get("warehouse") or item.get("target_warehouse")
+            item_code = item.get("item_code")
+
+            # Fetch stock details for this item
+            stock_data = {}
+            if warehouse and item_code:
+                try:
+                    stock_data = client.get_bin_details(item_code, warehouse)
+                except Exception as e:
+                    logger.warning(f"Could not fetch stock for {item_code} in {warehouse}: {e}")
+                    stock_data = {}
+
+            stock_actual = float(stock_data.get("actual_qty", 0.0))
+            stock_reserved = float(stock_data.get("reserved_qty", 0.0))
+            stock_available = stock_actual - stock_reserved
+
             items.append(
                 SalesOrderDetailItem(
-                    item_code=item.get("item_code"),
+                    item_code=item_code,
                     item_name=item.get("item_name"),
                     qty=item.get("qty", 0),
                     uom=item.get("uom"),
-                    warehouse=item.get("warehouse") or item.get("target_warehouse"),
+                    warehouse=warehouse,
+                    stock_actual=stock_actual,
+                    stock_reserved=stock_reserved,
+                    stock_available=stock_available,
                 )
             )
 

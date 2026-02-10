@@ -35,6 +35,7 @@ coverage.xml
 allure-results/
 allure-report/
 
+
 # Playwright
 test-results/
 playwright-report/
@@ -56,3 +57,7 @@ playwright/.cache/
 # OS
 .DS_Store
 Thumbs.db
+
+
+
+

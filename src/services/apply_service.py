@@ -26,7 +26,7 @@ class ApplyService:
     ) -> ApplyPromiseResponse:
         """
         Apply promise to a Sales Order in ERPNext.
-        
+
         Actions:
         - add_comment: Add a comment to the SO
         - set_custom_field: Update custom field (if exists)
@@ -79,7 +79,7 @@ class ApplyService:
 
                     # Also set confidence if field exists
                     try:
-                        conf_response = self.client.update_sales_order_custom_field(
+                        self.client.update_sales_order_custom_field(
                             sales_order_id, "custom_otp_confidence", confidence
                         )
                         actions_taken.append(
@@ -91,7 +91,7 @@ class ApplyService:
                 except ERPNextClientError as e:
                     logger.warning(f"Failed to set custom field: {e}")
                     actions_taken.append(
-                        f"Custom field not available (may need to create it in ERPNext)"
+                        "Custom field not available (may need to create it in ERPNext)"
                     )
 
             return ApplyPromiseResponse(
@@ -118,7 +118,7 @@ class ApplyService:
     ) -> ProcurementSuggestionResponse:
         """
         Create procurement suggestion in ERPNext.
-        
+
         Types:
         - material_request: Create a Material Request
         - draft_po: Create a draft Purchase Order (future)
@@ -135,9 +135,7 @@ class ApplyService:
                 mr_response = self.client.create_material_request(items, erpnext_priority)
 
                 mr_name = mr_response.get("name", "Unknown")
-                erpnext_url = (
-                    f"{settings.erpnext_base_url}/app/material-request/{mr_name}"
-                )
+                erpnext_url = f"{settings.erpnext_base_url}/app/material-request/{mr_name}"
 
                 return ProcurementSuggestionResponse(
                     status="success",
