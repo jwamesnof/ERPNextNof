@@ -1,0 +1,1 @@
+ERROR    src.routes.otp:otp.py:273 [OTP API] ERPNext error: TypeError: get_list() got multiple values for argument 'doctype'

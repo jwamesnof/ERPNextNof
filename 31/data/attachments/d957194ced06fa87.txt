@@ -1,0 +1,1 @@
+ERROR    src.routes.items:items.py:53 ERPNext error fetching stock for NONEXISTENT in Stores - SD: HTTP 404: Item not found
